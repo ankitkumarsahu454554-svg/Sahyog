@@ -1,0 +1,1948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SahyogAI Odisha (ସହଯୋଗ) — AI Disaster Relief & Response (Brahmapur, Ganjam)</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#EA580C">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              orange: '#EA580C',
+              orangeDark: '#C2410C',
+              orangeLight: '#FFEDD5',
+              charcoal: '#0F172A',
+              navy: '#1E293B',
+              alertRed: '#DC2626',
+              warningYellow: '#D97706',
+              successGreen: '#16A34A',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'Noto Sans Oriya', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts: Inter & Noto Sans Oriya -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+Oriya:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Icons, Maps & Charts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <style>
+    .urgent-pulse {
+      animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .75; transform: scale(1.02); }
+    }
+    .badge-critical { background-color: #FEE2E2; color: #991B1B; border: 1px solid #F87171; }
+    .badge-high { background-color: #FEF3C7; color: #92400E; border: 1px solid #FBBF24; }
+    .badge-medium, .badge-moderate { background-color: #E0E7FF; color: #3730A3; border: 1px solid #818CF8; }
+    .badge-low { background-color: #DCFCE7; color: #166534; border: 1px solid #4ADE80; }
+    
+    .nav-item.active {
+      color: #EA580C;
+      background-color: #FFEDD5;
+    }
+    #miniMap { height: 190px; width: 100%; border-radius: 0.75rem; }
+    #liveOverviewMap { height: 350px; width: 100%; border-radius: 0.75rem; }
+
+    .mic-recording-pulse {
+      animation: mic-wave 1.4s ease-in-out infinite;
+    }
+    @keyframes mic-wave {
+      0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
+      70% { box-shadow: 0 0 0 16px rgba(220, 38, 38, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col font-sans antialiased selection:bg-orange-500 selection:text-white">
+
+  <!-- STANDALONE / OFFLINE MODE BANNER -->
+  <div id="modeBanner" class="bg-slate-800 text-slate-200 text-xs py-1.5 px-4 text-center border-b border-slate-700 flex items-center justify-center gap-2">
+    <span id="modeIcon" class="w-2 h-2 rounded-full bg-emerald-400"></span>
+    <span id="modeText">Checking backend server connectivity...</span>
+  </div>
+
+  <!-- TOP BANNER: SITUATION REPORT & CONTROLS -->
+  <div class="bg-slate-900 text-white text-xs px-4 py-2 border-b border-slate-800">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2">
+        <span class="inline-flex h-2.5 w-2.5 rounded-full bg-red-500 animate-ping"></span>
+        <span class="font-semibold text-orange-400" id="liveAlertHeader">CRISIS CELL:</span>
+        <span class="text-slate-300" id="liveAlertDesc">Brahmapur & Ganjam Coastal Sector • OSDMA / BeMC Control</span>
+        <span class="hidden md:inline-block text-[10px] bg-slate-800 text-slate-400 px-2 py-0.5 rounded border border-slate-700">Helpline: Dial 112 / 1077</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Live SSE indicator -->
+        <span class="flex items-center gap-1.5 text-[11px] text-slate-400" title="Realtime Server-Sent Events Sync">
+          <span id="sseIndicator" class="w-2 h-2 rounded-full bg-amber-400 inline-block"></span>
+          <span id="sseStatusText">Standby</span>
+        </span>
+        <span class="bg-orange-950 text-orange-300 px-2 py-0.5 rounded border border-orange-800">OSDMA / BeMC</span>
+        
+        <!-- Track Ticket shortcut -->
+        <button onclick="openTrackModal()" class="text-xs text-orange-300 hover:text-white underline flex items-center gap-1">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <span data-i18n="nav_track_btn">Track SOS</span>
+        </button>
+
+        <!-- Language Switcher: Odia <-> English -->
+        <button id="langToggleBtn" onclick="toggleLanguage()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-orange-400 px-2.5 py-1 rounded transition font-medium border border-slate-700">
+          <i class="fa-solid fa-language"></i>
+          <span id="langLabel">ଓଡ଼ିଆ (Odia)</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NAVIGATION BAR -->
+  <header class="sticky top-0 z-40 bg-white/95 backdrop-blur shadow-sm border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="navigate('home')">
+        <div class="w-10 h-10 rounded-xl bg-orange-600 text-white flex items-center justify-center shadow-md shadow-orange-600/30 font-black text-xl">
+          <i class="fa-solid fa-bolt-lightning"></i>
+        </div>
+        <div>
+          <span class="text-lg font-black tracking-tight text-slate-900 block leading-tight">SahyogAI <span class="text-orange-600">Odisha</span></span>
+          <span class="text-[10px] text-slate-500 font-semibold tracking-wider uppercase block" id="subbrandText">ସହଯୋଗ • Brahmapur Hub</span>
+        </div>
+      </div>
+
+      <!-- Desktop Nav Links -->
+      <nav class="hidden lg:flex items-center gap-1">
+        <button onclick="navigate('home')" id="nav-home" class="nav-item active px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition" data-i18n="nav_home">Home</button>
+        <button onclick="navigate('action')" id="nav-action" class="nav-item px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition flex items-center gap-1.5" data-i18n="nav_action">
+          <span class="w-2 h-2 rounded-full bg-red-600 animate-pulse"></span>
+          <span>Emergency SOS</span>
+        </button>
+        <button onclick="navigate('result')" id="nav-result" class="nav-item px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition" data-i18n="nav_result">Dispatch Board</button>
+        <button onclick="navigate('volunteers')" id="nav-volunteers" class="nav-item px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition" data-i18n="nav_volunteers">ODRAF & Volunteers</button>
+        <button onclick="navigate('resources')" id="nav-resources" class="nav-item px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition" data-i18n="nav_resources">Relief Supplies</button>
+        <button onclick="navigate('analytics')" id="nav-analytics" class="nav-item px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:text-orange-600 hover:bg-orange-50 transition" data-i18n="nav_analytics">Analytics</button>
+      </nav>
+
+      <!-- Right Action & Auth -->
+      <div class="hidden sm:flex items-center gap-2.5">
+        <button onclick="navigate('action')" class="bg-red-600 hover:bg-red-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm shadow-red-600/30">
+          <i class="fa-solid fa-bullhorn animate-bounce"></i>
+          <span data-i18n="btn_quick_sos">Submit SOS</span>
+        </button>
+        <div id="authContainer" class="flex items-center gap-2">
+          <!-- Injected via auth handler -->
+        </div>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button onclick="toggleMobileNav()" class="lg:hidden text-slate-700 hover:text-slate-900 p-2">
+        <i class="fa-solid fa-bars text-xl"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- MOBILE NAVIGATION DRAWER -->
+  <div id="mobileNavDrawer" class="hidden lg:hidden bg-white border-b border-slate-200 px-4 py-3 space-y-1">
+    <button onclick="navigate('home'); closeMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50" data-i18n="nav_home">Home</button>
+    <button onclick="navigate('action'); closeMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-bold text-red-600 hover:bg-red-50 flex items-center gap-2" data-i18n="nav_action">
+      <i class="fa-solid fa-triangle-exclamation"></i> Emergency SOS (Voice/Text)
+    </button>
+    <button onclick="navigate('result'); closeMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50" data-i18n="nav_result">Dispatch Board</button>
+    <button onclick="navigate('volunteers'); closeMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50" data-i18n="nav_volunteers">ODRAF & Volunteers</button>
+    <button onclick="navigate('resources'); closeMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50" data-i18n="nav_resources">Relief Supplies</button>
+    <button onclick="navigate('analytics'); closeMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50" data-i18n="nav_analytics">Analytics</button>
+    <button onclick="openTrackModal(); closeMobileNav()" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium text-orange-600 hover:bg-orange-50">
+      <i class="fa-solid fa-magnifying-glass"></i> Track SOS Ticket
+    </button>
+  </div>
+
+  <!-- MAIN VIEW CONTAINER -->
+  <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
+
+    <!-- ===================================================================== -->
+    <!-- 1. SCREEN: HOME / SITUATION ROOM -->
+    <!-- ===================================================================== -->
+    <div id="screen-home" class="space-y-8">
+      
+      <!-- VICTIM EMERGENCY CALLOUT CARD (CRISIS-FIRST UX) -->
+      <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-red-600 via-orange-600 to-amber-600 p-6 md:p-8 text-white shadow-xl shadow-red-600/20">
+        <div class="relative z-10 max-w-3xl space-y-4">
+          <div class="inline-flex items-center gap-2 bg-white/20 backdrop-blur px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider text-white">
+            <span class="w-2 h-2 rounded-full bg-white animate-ping"></span>
+            <span data-i18n="hero_pill">Brahmapur & Coastal Ganjam Disaster Operations</span>
+          </div>
+          <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight" data-i18n="hero_promise">
+            Trapped in floodwaters or facing an emergency in Brahmapur?
+          </h1>
+          <p class="text-white/90 text-sm sm:text-base leading-relaxed" data-i18n="hero_problem">
+            SahyogAI coordinates rescue operations across Brahmapur, Gopalpur coast, and Ganjam flood zones. Speak or type in Odia (ଓଡ଼ିଆ) or English. AI automatically triages urgency, routes to ODRAF and Odisha Red Cross units, and secures your request even during mobile network blackouts.
+          </p>
+
+          <!-- Tactile Big Action Buttons for Victims -->
+          <div class="pt-2 flex flex-wrap items-center gap-3">
+            <button onclick="navigate('action'); triggerVoiceDirectly();" class="bg-white text-red-700 hover:bg-red-50 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center gap-2.5 shadow-lg shadow-black/10">
+              <i class="fa-solid fa-microphone text-red-600 text-lg"></i>
+              <span data-i18n="btn_voice_sos">One-Tap Voice SOS (ଭଏସ୍)</span>
+            </button>
+            <button onclick="navigate('action')" class="bg-slate-900/80 hover:bg-slate-900 border border-white/30 text-white px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition flex items-center gap-2">
+              <i class="fa-solid fa-pen-to-square"></i>
+              <span data-i18n="hero_cta">Fill Emergency Form</span>
+            </button>
+            <button onclick="openTrackModal()" class="bg-white/20 hover:bg-white/30 text-white px-4 py-3 rounded-xl font-semibold text-sm transition flex items-center gap-2">
+              <i class="fa-solid fa-ticket"></i>
+              <span data-i18n="btn_track_sos">Check SOS Status</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- LIVE BRAHMAPUR & GANJAM MAP & STATS OVERVIEW -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Leaflet Map Container -->
+        <div class="lg:col-span-2 bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                <i class="fa-solid fa-map-location-dot text-orange-600"></i>
+                <span data-i18n="map_title">Brahmapur Incident Sector Map</span>
+              </h3>
+              <p class="text-xs text-slate-500" data-i18n="map_subtitle">Live geographic distribution of SOS calls across Brahmapur & Gopalpur coast</p>
+            </div>
+            <span class="text-xs font-semibold px-2.5 py-1 bg-orange-50 text-orange-700 rounded-full border border-orange-200">Ganjam District Grid</span>
+          </div>
+          
+          <div id="liveOverviewMap"></div>
+          
+          <!-- Map Legend -->
+          <div class="flex flex-wrap items-center gap-4 text-xs text-slate-600 pt-1 border-t border-slate-100">
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-red-600 inline-block"></span> Critical Life Threat</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> High Priority</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500 inline-block"></span> Moderate Need</span>
+            <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> Resolved</span>
+          </div>
+        </div>
+
+        <!-- Quick Status KPIs -->
+        <div class="space-y-4">
+          <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-xl font-bold">
+              <i class="fa-solid fa-bell"></i>
+            </div>
+            <div>
+              <span class="text-2xl font-black text-slate-900" id="kpiCriticalCount">3</span>
+              <p class="text-xs font-medium text-slate-500" data-i18n="kpi_critical">Critical Active Incidents</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-orange-100 text-orange-600 flex items-center justify-center text-xl font-bold">
+              <i class="fa-solid fa-person-military-pointing"></i>
+            </div>
+            <div>
+              <span class="text-2xl font-black text-slate-900" id="kpiVolunteersAvailable">4 Squads</span>
+              <p class="text-xs font-medium text-slate-500" data-i18n="kpi_volunteers">ODRAF & Red Cross Ready</p>
+            </div>
+          </div>
+
+          <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4">
+            <div class="w-12 h-12 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-xl font-bold">
+              <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+            <div>
+              <span class="text-2xl font-black text-slate-900" id="kpiResourcesAvailable">1,525 Units</span>
+              <p class="text-xs font-medium text-slate-500" data-i18n="kpi_resources">Relief Stock in Brahmapur</p>
+            </div>
+          </div>
+
+          <div class="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-4 text-white space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs uppercase tracking-wider text-orange-400 font-bold block" data-i18n="ctrl_room_title">Ganjam & Brahmapur EOC</span>
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-xs pt-1">
+              <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                <span class="text-slate-400 block text-[10px]" data-i18n="tel_ganjam_label">Ganjam Collectorate</span>
+                <a href="tel:1077" class="text-orange-300 font-bold font-mono text-sm hover:underline flex items-center gap-1">
+                  <i class="fa-solid fa-phone-volume text-[10px]"></i> 1077
+                </a>
+              </div>
+              <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                <span class="text-slate-400 block text-[10px]" data-i18n="tel_mkcg_label">MKCG Casualty</span>
+                <a href="tel:06802220456" class="text-orange-300 font-bold font-mono text-sm hover:underline flex items-center gap-1">
+                  <i class="fa-solid fa-hospital text-[10px]"></i> 0680-2220456
+                </a>
+              </div>
+              <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                <span class="text-slate-400 block text-[10px]" data-i18n="tel_bemc_label">BeMC Control Room</span>
+                <a href="tel:1916" class="text-orange-300 font-bold font-mono text-sm hover:underline flex items-center gap-1">
+                  <i class="fa-solid fa-building text-[10px]"></i> 1916
+                </a>
+              </div>
+              <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
+                <span class="text-slate-400 block text-[10px]" data-i18n="tel_nat_label">National Disaster</span>
+                <a href="tel:112" class="text-orange-300 font-bold font-mono text-sm hover:underline flex items-center gap-1">
+                  <i class="fa-solid fa-shield-halved text-[10px]"></i> 112
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 2. SCREEN: EMERGENCY SOS (VICTIM-FIRST INTAKE) -->
+    <!-- ===================================================================== -->
+    <div id="screen-action" class="hidden max-w-3xl mx-auto space-y-6">
+      
+      <!-- Screen Header -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="inline-flex items-center gap-1.5 text-xs font-bold text-red-600 bg-red-50 border border-red-200 px-3 py-1 rounded-full uppercase">
+            <span class="w-2 h-2 rounded-full bg-red-600 animate-ping"></span>
+            <span data-i18n="sos_badge">Rapid Citizen SOS Intake</span>
+          </span>
+          <span class="text-xs text-slate-500">Brahmapur, Ganjam • ଓଡ଼ିଶା</span>
+        </div>
+        <h2 class="text-2xl sm:text-3xl font-black text-slate-900" data-i18n="action_title">Emergency SOS & Instant Triage</h2>
+        <p class="text-sm text-slate-600" data-i18n="action_subtitle">Speak via microphone or type details in Odia, English, or mixed phonetic text. AI triage analyzes urgency and notifies the Ganjam crisis board immediately.</p>
+      </div>
+
+            <!-- DIRECT EMERGENCY SPEED DIAL BAR (FOR INSTANT CALLING) -->
+      <div class="bg-red-950 text-white rounded-2xl p-4 border border-red-800 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-full bg-red-600 flex items-center justify-center text-white text-base shadow-sm shrink-0">
+            <i class="fa-solid fa-phone-volume animate-bounce"></i>
+          </div>
+          <div>
+            <span class="font-bold text-sm block" data-i18n="speed_dial_title">Battery Dying? Immediate Phone Helplines</span>
+            <span class="text-xs text-red-200" data-i18n="speed_dial_sub">Tap any number to call Brahmapur rescue teams directly</span>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 shrink-0">
+          <a href="tel:112" class="bg-red-700 hover:bg-red-600 text-white font-mono font-bold text-xs px-3 py-1.5 rounded-lg border border-red-500 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-phone text-[10px]"></i> 112
+          </a>
+          <a href="tel:1077" class="bg-slate-800 hover:bg-slate-700 text-white font-mono font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-600 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-triangle-exclamation text-[10px] text-amber-400"></i> 1077
+          </a>
+          <a href="tel:06802220456" class="bg-slate-800 hover:bg-slate-700 text-white font-mono font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-600 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-hospital text-[10px] text-red-400"></i> MKCG: 0680-2220456
+          </a>
+          <a href="tel:108" class="bg-slate-800 hover:bg-slate-700 text-white font-mono font-bold text-xs px-3 py-1.5 rounded-lg border border-slate-600 transition flex items-center gap-1.5 shadow-sm">
+            <i class="fa-solid fa-truck-medical text-[10px] text-emerald-400"></i> 108
+          </a>
+        </div>
+      </div>
+
+      <!-- VOICE SOS MIC WIDGET (STITCH CRISIS UX) -->
+      <div class="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-6 border-2 border-dashed border-orange-300 flex flex-col items-center justify-center text-center space-y-3">
+        <button id="voiceSosBtn" onclick="toggleVoiceSOS()" class="w-20 h-20 rounded-full bg-white text-orange-600 border-4 border-orange-400 shadow-md hover:scale-105 transition flex items-center justify-center text-3xl">
+          <i id="voiceMicIcon" class="fa-solid fa-microphone"></i>
+        </button>
+        <div>
+          <span id="voiceMicStatus" class="font-bold text-slate-800 text-sm block" data-i18n="mic_prompt">Press Mic & Speak Your Emergency (ମାଇକ୍ ଚିପି କୁହନ୍ତୁ)</span>
+          <span class="text-xs text-slate-500 block pt-0.5">Supports spoken Odia (ଓଡ଼ିଆ) and Indian English</span>
+        </div>
+      </div>
+
+      <!-- QUICK NEED 1-TAP CHIPS FOR VICTIMS -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500 block" data-i18n="quick_chips_title">1-Tap Need Presets (ତୁରନ୍ତ ଆବଶ୍ୟକତା ବଟନ୍):</span>
+        <div class="flex flex-wrap gap-2">
+          <button type="button" onclick="applyNeedChip('boat')" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 transition flex items-center gap-1.5">
+            <span>🚤</span> <span>Rescue Boat / ଡଙ୍ଗା</span>
+          </button>
+          <button type="button" onclick="applyNeedChip('medical')" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 transition flex items-center gap-1.5">
+            <span>🏥</span> <span>Ambulance / MKCG Hospital</span>
+          </button>
+          <button type="button" onclick="applyNeedChip('water')" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition flex items-center gap-1.5">
+            <span>💧</span> <span>Drinking Water / ପାନୀୟ ଜଳ</span>
+          </button>
+          <button type="button" onclick="applyNeedChip('food')" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 transition flex items-center gap-1.5">
+            <span>🍚</span> <span>Dry Food / ଚୁଡ଼ା-ଗୁଡ଼</span>
+          </button>
+          <button type="button" onclick="applyNeedChip('trapped')" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 transition flex items-center gap-1.5">
+            <span>🏠</span> <span>Stranded on Terrace / ଛାତରେ ଫସିଛୁ</span>
+          </button>
+          <button type="button" onclick="applyNeedChip('electric')" class="px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 transition flex items-center gap-1.5">
+            <span>⚡</span> <span>Live Wire / ବିଦ୍ୟୁତ ତାର</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- MAIN EMERGENCY SUBMISSION FORM -->
+      <form id="sosForm" onsubmit="submitSOS(event)" class="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-5">
+        
+        <!-- Emergency Description -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1.5" data-i18n="form_message_label">Emergency Details (ସମସ୍ୟାର ବିବରଣୀ):</label>
+          <textarea id="sosReportText" rows="4" required class="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-200 focus:outline-none placeholder:text-slate-400" placeholder="Describe what happened, water level, number of people, urgent medical needs..."></textarea>
+          <div class="flex justify-between items-center text-[11px] text-slate-400 mt-1">
+            <span id="charCount">0 / 5000 chars</span>
+            <span>Odia ଓଡ଼ିଆ, English, and phonetic text accepted</span>
+          </div>
+        </div>
+
+        <!-- Location Description + GPS Grab -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1.5" data-i18n="form_location_label">Location / Landmark in Brahmapur (ସ୍ଥାନ):</label>
+          <div class="flex gap-2">
+            <input type="text" id="sosLocationText" required class="flex-1 rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-200 focus:outline-none placeholder:text-slate-400" placeholder="e.g., Gosaninuagaon near canal, Kamapalli Chhak, Gate Bazaar...">
+            <button type="button" onclick="grabCurrentGPS()" class="bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 whitespace-nowrap border border-slate-300">
+              <i class="fa-solid fa-location-crosshairs text-orange-600"></i>
+              <span data-i18n="btn_gps">Grab GPS</span>
+            </button>
+          </div>
+          <!-- GPS Accuracy Status indicator -->
+          <div id="gpsStatusBadge" class="hidden text-xs text-emerald-600 font-semibold mt-1.5 flex items-center gap-1">
+            <i class="fa-solid fa-circle-check"></i>
+            <span id="gpsStatusText">GPS Acquired</span>
+          </div>
+
+          <!-- Quick Landmark Picker Dropdown -->
+          <div class="pt-2">
+            <select onchange="selectBrahmapurLandmark(this.value)" class="text-xs bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5 text-slate-600 focus:outline-none">
+              <option value="">-- Or choose known Brahmapur landmark --</option>
+              <option value="MKCG Medical College & Hospital, Brahmapur">MKCG Medical College & Hospital (ଏମକେସିଜି)</option>
+              <option value="Gopalpur Sea Beach, Near Light House">Gopalpur Sea Beach (ଗୋପାଳପୁର ସମୁଦ୍ର କୂଳ)</option>
+              <option value="Kamapalli Chhak, Near Tata Benz Square">Kamapalli Chhak (କାମାପଲ୍ଲୀ ଛକ)</option>
+              <option value="Gosaninuagaon Canal Sector, Brahmapur">Gosaninuagaon Canal Sector (ଗୋସାଇଁନୂଆଗାଁ)</option>
+              <option value="Gate Bazaar Main Road, Brahmapur">Gate Bazaar (ଗେଟ୍ ବଜାର)</option>
+              <option value="Old Bus Stand, Near Giri Road">Old Bus Stand (ପୁରୁଣା ବସ୍ ଷ୍ଟାଣ୍ଡ)</option>
+              <option value="Khallikote Unitary University Campus">Khallikote University (ଖଲ୍ଲିକୋଟ ବିଶ୍ୱବିଦ୍ୟାଳୟ)</option>
+              <option value="Engineering School Road, Brahmapur">Engineering School Road (ଇଞ୍ଜିନିୟରିଂ ସ୍କୁଲ୍)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Category & People Count Row -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-800 mb-1.5" data-i18n="form_category_label">Primary Need Category:</label>
+            <select id="sosCategorySelect" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-200 focus:outline-none bg-white">
+              <option value="">Auto-Detect by AI</option>
+              <option value="Flooding">Flooding / Water Ingress (ବନ୍ୟା)</option>
+              <option value="Medical Emergency">Medical Emergency (ଚିକିତ୍ସା ସହାୟତା)</option>
+              <option value="Trapped / Missing People">Trapped / Missing People (ଫସି ରହିଛନ୍ତି)</option>
+              <option value="Food & Drinking Water">Food & Drinking Water (ଖାଦ୍ୟ ଓ ପାଣି)</option>
+              <option value="Roadblock & Fallen Trees">Roadblock & Snapped Wires (ରାସ୍ତା ଅବରୋଧ)</option>
+              <option value="Shelter">Temporary Shelter (ଆଶ୍ରୟ)</option>
+              <option value="Fire">Fire Hazard (ଅଗ୍ନିକାଣ୍ଡ)</option>
+              <option value="Other Emergency">Other Emergency</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-sm font-bold text-slate-800 mb-1.5">Estimated People Affected:</label>
+            <select id="sosPeopleCount" class="w-full rounded-xl border border-slate-300 px-3.5 py-2.5 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-200 focus:outline-none bg-white">
+              <option value="1-3">1 - 3 people</option>
+              <option value="4-8" selected>4 - 8 people (Family)</option>
+              <option value="9-25">9 - 25 people (Building/Hamlet)</option>
+              <option value="25+">25+ people (Relief Camp/Shelter)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Optional Contact -->
+        <div>
+          <label class="block text-sm font-bold text-slate-800 mb-1.5">Contact Phone Number (Optional & Restricted):</label>
+          <input type="tel" id="sosContactPhone" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm focus:border-orange-500 focus:ring-2 focus:ring-orange-200 focus:outline-none placeholder:text-slate-400" placeholder="10-digit mobile number for rescue team call-back">
+          <span class="text-[11px] text-slate-400 block mt-1">Stored securely on server; never shown on public dispatch feeds.</span>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="btnSubmitSOS" class="w-full py-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-base transition flex items-center justify-center gap-2 shadow-lg shadow-orange-600/30">
+          <i class="fa-solid fa-paper-plane"></i>
+          <span data-i18n="btn_submit_triage">Submit SOS & Run AI Triage</span>
+        </button>
+      </form>
+
+      <!-- CITIZEN TRACKING RECEIPT (APPEARS AFTER SUBMISSION) -->
+      <div id="sosReceiptCard" class="hidden bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-6 text-slate-900 space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold">✓</span>
+            <div>
+              <span class="text-sm font-bold text-emerald-950 block">SOS Submitted & Secured</span>
+              <span class="text-xs text-emerald-800">Your emergency is now live on the Ganjam Dispatch Board</span>
+            </div>
+          </div>
+          <span id="receiptRefBadge" class="bg-emerald-200 text-emerald-900 font-mono font-bold text-xs px-3 py-1 rounded-lg">INC-BAM-XXXX</span>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 border border-emerald-200 space-y-2">
+          <div class="flex justify-between text-xs text-slate-500">
+            <span>Reference Tracking Code:</span>
+            <button onclick="copyReceiptRef()" class="text-emerald-700 hover:underline font-bold"><i class="fa-solid fa-copy"></i> Copy Code</button>
+          </div>
+          <div id="receiptRefValue" class="text-xl font-black font-mono text-slate-900 tracking-wider">INC-BAM-0000</div>
+          <p class="text-xs text-slate-600 pt-1">Save this code. You can check the status of your rescue team anytime by clicking <strong>Track SOS</strong> at the top.</p>
+        </div>
+
+        <div class="flex gap-2">
+          <button onclick="navigate('result')" class="flex-1 bg-emerald-700 hover:bg-emerald-800 text-white py-2.5 rounded-xl font-bold text-xs transition">
+            View on Live Dispatch Board
+          </button>
+          <button onclick="resetSOSForm()" class="bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 px-4 py-2.5 rounded-xl font-bold text-xs transition">
+            Submit Another SOS
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 3. SCREEN: SHARED DISPATCH BOARD -->
+    <!-- ===================================================================== -->
+    <div id="screen-result" class="hidden space-y-6">
+      
+      <!-- Top Bar & Filters -->
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-black text-slate-900" data-i18n="dispatch_title">Shared Crisis Dispatch Board</h2>
+          <p class="text-xs text-slate-500" data-i18n="dispatch_subtitle">OSDMA, Ganjam District Administration & BeMC Central Incident Queue</p>
+        </div>
+
+        <!-- Filter Pills -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button onclick="filterUrgency('ALL')" id="filter-all" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-slate-900 text-white">ALL</button>
+          <button onclick="filterUrgency('Critical')" id="filter-critical" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-red-100 text-red-700 hover:bg-red-200">Critical</button>
+          <button onclick="filterUrgency('High')" id="filter-high" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-100 text-amber-800 hover:bg-amber-200">High</button>
+          <button onclick="filterUrgency('Medium')" id="filter-medium" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-indigo-100 text-indigo-700 hover:bg-indigo-200">Medium</button>
+          <button onclick="filterUrgency('Low')" id="filter-low" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-100 text-emerald-700 hover:bg-emerald-200">Low</button>
+        </div>
+      </div>
+
+      <!-- Live Incidents Grid -->
+      <div id="incidentsGrid" class="space-y-3">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 4. SCREEN: VOLUNTEERS & ODRAF TEAMS -->
+    <!-- ===================================================================== -->
+    <div id="screen-volunteers" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-black text-slate-900">ODRAF Units & Field Volunteers</h2>
+          <p class="text-xs text-slate-500">Active volunteer roster across Brahmapur, Khallikote, and coastal Ganjam.</p>
+        </div>
+        <div id="volunteerAdminControls">
+          <!-- Populated for admins -->
+        </div>
+      </div>
+
+      <!-- Volunteers Table -->
+      <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-100 text-slate-700 uppercase font-semibold border-b border-slate-200">
+              <tr>
+                <th class="py-3 px-4">Squad / Volunteer</th>
+                <th class="py-3 px-4">Affiliation & Sector</th>
+                <th class="py-3 px-4">Skills</th>
+                <th class="py-3 px-4">Availability</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="volunteersTableBody" class="divide-y divide-slate-100 text-slate-800 font-medium">
+              <!-- Rendered dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 5. SCREEN: RELIEF INVENTORY & DEPOTS -->
+    <!-- ===================================================================== -->
+    <div id="screen-resources" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-2xl font-black text-slate-900">Brahmapur Relief Inventory & Depots</h2>
+          <p class="text-xs text-slate-500">Real-time supply tracking across BeMC Warehouses, Ganjam Collectorate & MKCG Store.</p>
+        </div>
+        <div id="resourceAdminControls">
+          <!-- Populated for coordinators -->
+        </div>
+      </div>
+
+      <!-- Resources Cards Grid -->
+      <div id="resourcesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- 6. SCREEN: ANALYTICS & SITUATION REPORTS -->
+    <!-- ===================================================================== -->
+    <div id="screen-analytics" class="hidden space-y-6">
+      <div class="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        <h2 class="text-2xl font-black text-slate-900">Brahmapur Crisis Analytics & Telemetry</h2>
+        <p class="text-xs text-slate-500">Data-driven incident breakdown, AI triage classification accuracy, and audit log.</p>
+      </div>
+
+      <!-- Charts Row -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+          <h3 class="font-bold text-sm text-slate-900">Urgency Distribution (Critical vs High vs Medium)</h3>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="urgencyChart"></canvas>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+          <h3 class="font-bold text-sm text-slate-900">Incidents by Category</h3>
+          <div class="h-64 flex items-center justify-center">
+            <canvas id="categoryChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: INCIDENT DETAIL & DISPATCH VIEW -->
+  <!-- ===================================================================== -->
+  <div id="incidentModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 space-y-5 my-8 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <div>
+          <span id="modalRef" class="font-mono font-bold text-xs bg-slate-100 px-2.5 py-1 rounded text-slate-800">INC-BAM-000</span>
+          <span id="modalUrgencyBadge" class="ml-2 text-xs font-bold px-2 py-0.5 rounded badge-critical">Critical</span>
+        </div>
+        <button onclick="closeIncidentModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
+      </div>
+
+      <!-- Content -->
+      <div id="modalBody" class="space-y-4">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <!-- Mini-map inside modal -->
+      <div id="miniMap"></div>
+
+      <!-- Action Footer -->
+      <div id="modalActions" class="border-t border-slate-100 pt-4 flex flex-wrap gap-2 justify-end">
+        <!-- Injected -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: TRACK MY SOS TICKET (ANONYMOUS LOOKUP) -->
+  <!-- ===================================================================== -->
+  <div id="trackModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-magnifying-glass text-orange-600"></i>
+          <span>Track Your SOS Emergency Ticket</span>
+        </h3>
+        <button onclick="closeTrackModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      </div>
+      <div>
+        <label class="block text-xs font-bold text-slate-700 mb-1">Enter Emergency Reference Code:</label>
+        <input type="text" id="trackInputRef" placeholder="e.g. INC-BAM-001" class="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm uppercase font-mono tracking-wider focus:outline-none focus:ring-2 focus:ring-orange-200">
+      </div>
+      <button onclick="lookupTrackStatus()" class="w-full py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm transition">
+        Look Up Status
+      </button>
+      <div id="trackResultBox" class="hidden pt-2 text-xs space-y-2 border-t border-slate-100"></div>
+    </div>
+  </div>
+
+  <!-- ===================================================================== -->
+  <!-- MODAL: LOGIN / AUTH -->
+  <!-- ===================================================================== -->
+  <div id="loginModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-200 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-orange-600"></i>
+          <span>Coordinator & Staff Login</span>
+        </h3>
+        <button onclick="closeLoginModal()" class="text-slate-400 hover:text-slate-600 text-xl">&times;</button>
+      </div>
+      <form onsubmit="handleLogin(event)" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Username:</label>
+          <input type="text" id="loginUsername" required class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1">Password:</label>
+          <input type="password" id="loginPassword" required class="w-full rounded-xl border border-slate-300 px-3.5 py-2 text-sm focus:outline-none">
+        </div>
+        <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px] text-slate-500">
+          <strong>Demo credentials:</strong><br>
+          Coordinator: <code class="text-orange-600">coordinator</code> / <code class="text-orange-600">Coord@2024!</code><br>
+          Admin: <code class="text-orange-600">admin</code> / <code class="text-orange-600">Admin@2024!</code>
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm transition">
+          Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATIONS -->
+  <div id="toastContainer" class="fixed bottom-6 left-6 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- ===================================================================== -->
+  <!-- 7. APPLICATION SCRIPT (BRAHMAPUR ODISHA CRISIS PRODUCT ENGINE) -->
+  <!-- ===================================================================== -->
+  <script>
+    // --- 1. GLOBAL STATE & CONFIGURATION ---
+    let isServerConnected = false;
+    const API_BASE = window.location.protocol === 'file:'
+      ? 'http://localhost:5000/api'
+      : (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+          ? (window.location.protocol + '//' + window.location.hostname + ':5000/api')
+          : '/api');
+
+    let currentUser = null;
+    let currentLang = 'en'; // 'en' or 'or' (Odia)
+    let incidents = [];
+    let volunteersList = [];
+    let resourcesList = [];
+    let currentModalIncident = null;
+    let sseSource = null;
+    let capturedCoordinates = null;
+    let overviewMap = null;
+    let modalMiniMap = null;
+    let overviewMarkersLayer = null;
+
+    // Speech recognition
+    let speechRecognitionInstance = null;
+    let isRecordingVoice = false;
+
+    // --- 2. BILINGUAL DICTIONARY (ODIA ଓଡ଼ିଆ + ENGLISH) ---
+    const translations = {
+      en: {
+      ctrl_room_title: "Ganjam & Brahmapur EOC",
+      tel_ganjam_label: "Ganjam Collectorate",
+      tel_mkcg_label: "MKCG Casualty",
+      tel_bemc_label: "BeMC Control Room",
+      tel_nat_label: "National Disaster",
+      speed_dial_title: "Battery Dying? Immediate Phone Helplines",
+      speed_dial_sub: "Tap any number to call Brahmapur rescue teams directly",
+        nav_home: "Home",
+        nav_action: "Emergency SOS",
+        nav_result: "Dispatch Board",
+        nav_volunteers: "ODRAF & Volunteers",
+        nav_resources: "Relief Supplies",
+        nav_analytics: "Analytics",
+        btn_quick_sos: "Submit SOS",
+        nav_track_btn: "Track SOS",
+        hero_pill: "Brahmapur & Coastal Ganjam Disaster Operations",
+        hero_promise: "Trapped in floodwaters or facing an emergency in Brahmapur?",
+        hero_problem: "SahyogAI coordinates rescue operations across Brahmapur, Gopalpur coast, and Ganjam flood zones. Speak or type in Odia (ଓଡ଼ିଆ) or English. AI automatically triages urgency, routes to ODRAF and Odisha Red Cross units, and secures your request even during mobile network blackouts.",
+        btn_voice_sos: "One-Tap Voice SOS",
+        hero_cta: "Fill Emergency Form",
+        btn_track_sos: "Check SOS Status",
+        map_title: "Brahmapur Incident Sector Map",
+        map_subtitle: "Live geographic distribution of SOS calls across Brahmapur & Gopalpur coast",
+        kpi_critical: "Critical Active Incidents",
+        kpi_volunteers: "ODRAF & Red Cross Ready",
+        kpi_resources: "Relief Stock in Brahmapur",
+        sos_badge: "Rapid Citizen SOS Intake",
+        action_title: "Emergency SOS & Instant Triage",
+        action_subtitle: "Speak via microphone or type details in Odia, English, or mixed phonetic text. AI triage analyzes urgency and notifies the Ganjam crisis board immediately.",
+        mic_prompt: "Press Mic & Speak Your Emergency",
+        quick_chips_title: "1-Tap Need Presets:",
+        form_message_label: "Emergency Details:",
+        form_location_label: "Location / Landmark in Brahmapur:",
+        form_category_label: "Primary Need Category:",
+        btn_gps: "Grab GPS",
+        btn_submit_triage: "Submit SOS & Run AI Triage",
+        dispatch_title: "Shared Crisis Dispatch Board",
+        dispatch_subtitle: "OSDMA, Ganjam District Administration & BeMC Central Incident Queue"
+      },
+      or: {
+      ctrl_room_title: "ଗଞ୍ଜାମ ଓ ବ୍ରହ୍ମପୁର ଜରୁରୀକାଳୀନ କେନ୍ଦ୍ର",
+      tel_ganjam_label: "ଗଞ୍ଜାମ ଜିଲ୍ଲାପାଳ କାର୍ଯ୍ୟାଳୟ",
+      tel_mkcg_label: "ଏମକେସିଜି ଡାକ୍ତରଖାନା",
+      tel_bemc_label: "ବ୍ରହ୍ମପୁର ମହାନଗର ନିଗମ",
+      tel_nat_label: "ଜାତୀୟ ଜରୁରୀକାଳୀନ",
+      speed_dial_title: "ବ୍ୟାଟେରୀ ସରୁଛି କି? ତୁରନ୍ତ ଫୋନ୍ କରନ୍ତୁ",
+      speed_dial_sub: "ବ୍ରହ୍ମପୁର ଉଦ୍ଧାରକାରୀ ଦଳଙ୍କୁ ସିଧାସଳଖ କଲ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ",
+        nav_home: "ମୁଖ୍ୟ ପୃଷ୍ଠା",
+        nav_action: "ଜରୁରୀ ସହାୟତା",
+        nav_result: "ଡିସପାଚ୍ ବୋର୍ଡ",
+        nav_volunteers: "ସ୍ୱେଚ୍ଛାସେବୀ ଓ ODRAF",
+        nav_resources: "ରିଲିଫ୍ ସାମଗ୍ରୀ",
+        nav_analytics: "ପରିସଂଖ୍ୟାନ",
+        btn_quick_sos: "SOS ଦାଖଲ",
+        nav_track_btn: "ସ୍ଥିତି ଯାଞ୍ଚ",
+        hero_pill: "ବ୍ରହ୍ମପୁର ଓ ଉପକୂଳ ଗଞ୍ଜାମ ବିପର୍ଯ୍ୟୟ ପରିଚାଳନା କେନ୍ଦ୍ର",
+        hero_promise: "ବ୍ରହ୍ମପୁର ବା ଗଞ୍ଜାମରେ ବନ୍ୟା ବା ବିପର୍ଯ୍ୟୟରେ ଫସି ରହିଛନ୍ତି କି?",
+        hero_problem: "ସହଯୋଗAI ବ୍ରହ୍ମପୁର, ଗୋପାଳପୁର ଓ ଗଞ୍ଜାମ ଜିଲ୍ଲାର ଜରୁରୀ ସହାୟତା ପାଇଁ ନିୟୋଜିତ। ଓଡ଼ିଆ କିମ୍ବା ଇଂରାଜୀରେ ମାଇକ୍ ଚିପି କୁହନ୍ତୁ କିମ୍ବା ଲେଖନ୍ତୁ। AI ତୁରନ୍ତ ଆପଣଙ୍କ ସମସ୍ୟା ବିଶ୍ଳେଷଣ କରି ODRAF ଓ ରେଡକ୍ରସ ଉଦ୍ଧାରକାରୀ ଦଳ ପଠାଇବ।",
+        btn_voice_sos: "ଭଏସ୍ SOS (ମାଇକ୍ ଚିପନ୍ତୁ)",
+        hero_cta: "ଜରୁରୀ ଫର୍ମ ପୂରଣ କରନ୍ତୁ",
+        btn_track_sos: "ସହାୟତା ସ୍ଥିତି ଦେଖନ୍ତୁ",
+        map_title: "ବ୍ରହ୍ମପୁର ବିପର୍ଯ୍ୟୟ କ୍ଷେତ୍ର ମାନଚିତ୍ର",
+        map_subtitle: "ବ୍ରହ୍ମପୁର ଓ ଗୋପାଳପୁର କୂଳର ଲାଇଭ୍ ଜରୁରୀକାଳୀନ ସ୍ଥିତି",
+        kpi_critical: "ଜରୁରୀ ଜୀବନ ବିପଦ",
+        kpi_volunteers: "ପ୍ରସ୍ତୁତ ODRAF ଓ ରେଡକ୍ରସ୍",
+        kpi_resources: "ବ୍ରହ୍ମପୁରରେ ରିଲିଫ୍ ସାମଗ୍ରୀ",
+        sos_badge: "ତ୍ୱରିତ ନାଗରିକ ସହାୟତା SOS",
+        action_title: "ଜରୁରୀକାଳୀନ SOS ଓ AI ବିଶ୍ଳେଷଣ",
+        action_subtitle: "ମାଇକ୍ ଚିପି ଓଡ଼ିଆରେ କୁହନ୍ତୁ କିମ୍ବା ଟାଇପ୍ କରନ୍ତୁ। ଆମର AI ସିଷ୍ଟମ୍ ତୁରନ୍ତ ଗଞ୍ଜାମ ନିୟନ୍ତ୍ରଣ କକ୍ଷକୁ ଖବର ପଠାଇବ।",
+        mic_prompt: "ମାଇକ୍ ଚିପି ଆପଣଙ୍କ ସମସ୍ୟା କୁହନ୍ତୁ (Speak Now)",
+        quick_chips_title: "ତୁରନ୍ତ ଆବଶ୍ୟକତା ବଟନ୍:",
+        form_message_label: "ସମସ୍ୟାର ସମ୍ପୂର୍ଣ୍ଣ ବିବରଣୀ:",
+        form_location_label: "ବ୍ରହ୍ମପୁରରେ ଆପଣଙ୍କ ସ୍ଥାନ / ଲ୍ୟାଣ୍ଡମାର୍କ:",
+        form_category_label: "ସହାୟତା ବର୍ଗ:",
+        btn_gps: "ମୋର ସ୍ଥାନ ଚିହ୍ନଟ କରନ୍ତୁ",
+        btn_submit_triage: "SOS ଦାଖଲ କରନ୍ତୁ ଓ AI ସାହାଯ୍ୟ ନିଅନ୍ତୁ",
+        dispatch_title: "ଲାଇଭ୍ ଉଦ୍ଧାର ଓ ଡିସପାଚ୍ ବୋର୍ଡ",
+        dispatch_subtitle: "ଓଡ଼ିଶା ରାଜ୍ୟ ବିପର୍ଯ୍ୟୟ ପରିଚାଳନା (OSDMA), ଗଞ୍ଜାମ ପ୍ରଶାସନ ଓ BeMC"
+      }
+    };
+
+    function toggleLanguage() {
+      currentLang = currentLang === 'en' ? 'or' : 'en';
+      document.getElementById('langLabel').textContent = currentLang === 'en' ? 'ଓଡ଼ିଆ (Odia)' : 'English';
+      applyTranslations();
+      showToast(currentLang === 'or' ? 'ଓଡ଼ିଆ ଭାଷା ଚୟନ ହେଲା (Switched to Odia)' : 'Switched to English', 'info');
+    }
+
+    function applyTranslations() {
+      const dict = translations[currentLang] || translations.en;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (dict && dict[key]) el.textContent = dict[key];
+      });
+      if (currentLang === 'or') {
+        document.getElementById('subbrandText').textContent = 'ସହଯୋଗ • ବ୍ରହ୍ମପୁର କେନ୍ଦ୍ର';
+        document.getElementById('liveAlertDesc').textContent = 'ବ୍ରହ୍ମପୁର ଓ ଗଞ୍ଜାମ ଉପକୂଳ କ୍ଷେତ୍ର • OSDMA / BeMC ନିୟନ୍ତ୍ରଣ କକ୍ଷ';
+      } else {
+        document.getElementById('subbrandText').textContent = 'ସହଯୋଗ • Brahmapur Hub';
+        document.getElementById('liveAlertDesc').textContent = 'Brahmapur & Ganjam Coastal Sector • OSDMA / BeMC Control';
+      }
+    }
+
+    // --- 3. BRAHMAPUR, GANJAM SEED DATA (OFFLINE STANDALONE STORE) ---
+    const SEED_INCIDENTS = [
+      {
+        _id: "inc-bam-001",
+        ref: "INC-BAM-001",
+        locationDescription: "Gosaninuagaon Canal Road, Near Shiva Temple, Brahmapur",
+        originalReport: "Rushikulya backwater and flood entered our house in Gosaninuagaon near canal. 5 people stranded, grandmother needs urgent BP medicine.",
+        reportedCategory: "Medical Emergency",
+        category: "Medical Emergency",
+        effectiveUrgency: "Critical",
+        status: "awaiting_assignment",
+        createdAt: new Date(Date.now() - 15 * 60000).toISOString(),
+        aiTriage: {
+          source: "fallback",
+          incidentTitle: "Canal Flood & Geriatric Medication — Gosaninuagaon",
+          summary: "Residential flooding with rising water entering home. Elderly patient requires blood pressure medicine; evacuation boat needed.",
+          immediateNeeds: ["ODRAF Rescue Boat", "BP Medicine", "Elderly Evacuation Support"],
+          hazards: ["Rising canal floodwater", "Submerged open drains"],
+          confidence: "high"
+        },
+        coordinates: { lat: 19.3080, lng: 84.7800 },
+        isDemo: true
+      },
+      {
+        _id: "inc-bam-002",
+        ref: "INC-BAM-002",
+        locationDescription: "Kamapalli Chhak, Near Tata Benz Square, Brahmapur",
+        originalReport: "Severe 18-hour cyclone power blackout in Kamapalli near Tata Benz Square. Diabetic patient needs cold-chain insulin pen urgently before 2 PM.",
+        reportedCategory: "Medical Emergency",
+        category: "Medical Emergency",
+        effectiveUrgency: "Critical",
+        status: "assigned",
+        createdAt: new Date(Date.now() - 30 * 60000).toISOString(),
+        assignments: [{ volunteerName: "Rakesh (Odisha Red Cross Berhampur)" }],
+        aiTriage: {
+          source: "fallback",
+          incidentTitle: "Time-Critical Insulin Cold-Chain Transport",
+          summary: "Diabetic patient requiring refrigerated insulin delivery amidst prolonged 18-hour grid blackout.",
+          immediateNeeds: ["Insulin Pens", "Ice Cool-box"],
+          hazards: ["Time-critical deadline", "Grid blackout"],
+          confidence: "high"
+        },
+        coordinates: { lat: 19.3200, lng: 84.7850 },
+        isDemo: true
+      },
+      {
+        _id: "inc-bam-003",
+        ref: "INC-BAM-003",
+        locationDescription: "Gopalpur Sea Beach Fishing Village, Near Light House",
+        originalReport: "ସମୁଦ୍ରରୁ ଉଚ୍ଚ ଢେଉ ଆସି ଘର ଭାସିଗଲା। ଆମେ ୮ ଜଣ ଗାଁ ମନ୍ଦିର ଛାତ ଉପରେ ଫସି ରହିଛୁ। ପାଣି ଚାରିପାଖେ ବଢୁଛି, ଶୀଘ୍ର ଡଙ୍ଗା ପଠାନ୍ତୁ!",
+        reportedCategory: "Flooding",
+        category: "Flooding",
+        effectiveUrgency: "Critical",
+        status: "in_progress",
+        createdAt: new Date(Date.now() - 55 * 60000).toISOString(),
+        assignments: [{ volunteerName: "Team Sagar (Gopalpur Fishermen Guild)" }],
+        aiTriage: {
+          source: "fallback",
+          incidentTitle: "Gopalpur Coastal Temple Roof Evacuation",
+          summary: "Odia SOS: Severe coastal storm surge inundated coastal hamlet. 8 citizens stranded on temple terrace surrounded by rising seawater.",
+          immediateNeeds: ["ODRAF Inflatable Boat", "Life Jackets", "Coastal Evacuation"],
+          hazards: ["High coastal storm surge waves"],
+          confidence: "high"
+        },
+        coordinates: { lat: 19.2608, lng: 84.9080 },
+        isDemo: true
+      },
+      {
+        _id: "inc-bam-004",
+        ref: "INC-BAM-004",
+        locationDescription: "Khallikote Unitary University Campus Hall, Brahmapur",
+        originalReport: "Makeshift cyclone relief camp at Khallikote Unitary University hall has 75 displaced villagers including 14 infants. Drinking water tank contaminated with storm runoff.",
+        reportedCategory: "Food & Drinking Water",
+        category: "Food & Drinking Water",
+        effectiveUrgency: "High",
+        status: "awaiting_assignment",
+        createdAt: new Date(Date.now() - 85 * 60000).toISOString(),
+        aiTriage: {
+          source: "fallback",
+          incidentTitle: "Relief Shelter Water Contamination Crisis",
+          summary: "Evacuation camp with 75 residents and 14 infants suffering from contaminated water supply. High risk of waterborne outbreak.",
+          immediateNeeds: ["Safe Drinking Water (20L Cans)", "Infant Milk Formula", "Halogen Tablets"],
+          hazards: ["Waterborne illness outbreak risk"],
+          confidence: "high"
+        },
+        coordinates: { lat: 19.3160, lng: 84.7920 },
+        isDemo: true
+      },
+      {
+        _id: "inc-bam-005",
+        ref: "INC-BAM-005",
+        locationDescription: "Gate Bazaar Main Road, Near Old Post Office, Brahmapur",
+        originalReport: "Storm knocked down two 11kV live electrical cables into flooded street near Gate Bazaar. Road is blocked for ambulances heading to MKCG Hospital.",
+        reportedCategory: "Roadblock & Fallen Trees",
+        category: "Roadblock & Fallen Trees",
+        effectiveUrgency: "High",
+        status: "submitted",
+        createdAt: new Date(Date.now() - 110 * 60000).toISOString(),
+        aiTriage: {
+          source: "fallback",
+          incidentTitle: "Live 11kV Cables on MKCG Hospital Arterial Route",
+          summary: "Snapped live high-voltage power lines submerged in water on Gate Bazaar corridor, severing emergency transport access to MKCG Hospital.",
+          immediateNeeds: ["TPCODL Power Isolation Crew", "Road Debris Clearance"],
+          hazards: ["Live 11kV wire in water", "Blocks MKCG ambulance corridor"],
+          confidence: "high"
+        },
+        coordinates: { lat: 19.3000, lng: 84.7900 },
+        isDemo: true
+      }
+    ];
+
+    const SEED_VOLUNTEERS = [
+      {
+        _id: "vol-bam-001",
+        displayName: "Rakesh (Odisha Red Cross)",
+        username: "rakesh_redcross",
+        role: "volunteer",
+        isActive: true,
+        profile: {
+          skills: ["First Aid", "Patient Triage", "Emergency Care"],
+          serviceArea: "Kamapalli, Tata Benz Square",
+          teamAffiliation: "Odisha Red Cross - Berhampur Cell",
+          availability: "available"
+        }
+      },
+      {
+        _id: "vol-bam-002",
+        displayName: "Soumya (Khallikote NSS Wing)",
+        username: "soumya_nss",
+        role: "volunteer",
+        isActive: true,
+        profile: {
+          skills: ["Ration Distribution", "Relief Logistics", "Youth Rescue"],
+          serviceArea: "Khallikote, Giri Road, Courtpeta",
+          teamAffiliation: "Khallikote Unitary University NSS",
+          availability: "available"
+        }
+      },
+      {
+        _id: "vol-bam-003",
+        displayName: "Team Kalinga (ODRAF Cell)",
+        username: "team_kalinga",
+        role: "volunteer",
+        isActive: true,
+        profile: {
+          skills: ["Zodiac Boat Operation", "Deep Water Rescue", "Evacuation"],
+          serviceArea: "Gosaninuagaon, Rushikulya Flood Belt",
+          teamAffiliation: "ODRAF Berhampur Auxiliary",
+          availability: "available"
+        }
+      },
+      {
+        _id: "vol-bam-004",
+        displayName: "Team Sagar (Gopalpur Fishermen Guild)",
+        username: "team_sagar",
+        role: "volunteer",
+        isActive: true,
+        profile: {
+          skills: ["Off-road 4x4 Transport", "Coastal Surf Rescue", "Boats"],
+          serviceArea: "Gopalpur Coastal Belt, Old Bus Stand",
+          teamAffiliation: "Gopalpur Sea Rescue Guild",
+          availability: "available"
+        }
+      }
+    ];
+
+    const SEED_RESOURCES = [
+      {
+        _id: "res-bam-001",
+        ref: "RES-BAM-001",
+        name: "Packaged Safe Drinking Water (20L Cans)",
+        resourceType: "Drinking Water",
+        unit: "cans",
+        quantityTotal: 450,
+        quantityReserved: 30,
+        quantityDispatched: 60,
+        storageLocation: "BeMC Relief Warehouse, Tata Benz Square",
+        responsibleOrg: "Berhampur Municipal Corporation",
+        status: "available"
+      },
+      {
+        _id: "res-bam-002",
+        ref: "RES-BAM-002",
+        name: "Dry Ration Kits (Chuda, Gur & Biscuits)",
+        resourceType: "Food Packets",
+        unit: "kits",
+        quantityTotal: 600,
+        quantityReserved: 40,
+        quantityDispatched: 120,
+        storageLocation: "Ganjam Collectorate Storehouse",
+        responsibleOrg: "District Disaster Management Cell, Ganjam",
+        status: "available"
+      },
+      {
+        _id: "res-bam-003",
+        ref: "RES-BAM-003",
+        name: "First-Aid Kits & Snake Venom Antiserum",
+        resourceType: "First-Aid Kits",
+        unit: "kits",
+        quantityTotal: 90,
+        quantityReserved: 10,
+        quantityDispatched: 25,
+        storageLocation: "MKCG Medical College Emergency Annex",
+        responsibleOrg: "MKCG Hospital Casualty Department",
+        status: "available"
+      },
+      {
+        _id: "res-bam-004",
+        ref: "RES-BAM-004",
+        name: "Inflatable Zodiac Rescue Boats with OBM",
+        resourceType: "Boats",
+        unit: "boats",
+        quantityTotal: 6,
+        quantityReserved: 1,
+        quantityDispatched: 3,
+        storageLocation: "Gopalpur Marine Police & ODRAF Depot",
+        responsibleOrg: "ODRAF 3rd Battalion & Marine Wing",
+        status: "limited"
+      },
+      {
+        _id: "res-bam-005",
+        ref: "RES-BAM-005",
+        name: "Heavy-Duty Tarpaulin Sheets & Blankets",
+        resourceType: "Blankets",
+        unit: "units",
+        quantityTotal: 300,
+        quantityReserved: 20,
+        quantityDispatched: 80,
+        storageLocation: "Town Hall Community Relief Shed",
+        responsibleOrg: "Ganjam Red Cross Society",
+        status: "available"
+      }
+    ];
+
+    function getLocalDB() {
+      let db = localStorage.getItem('sahyog_odisha_mock_db');
+      if (!db) {
+        const initial = {
+          incidents: SEED_INCIDENTS,
+          volunteers: SEED_VOLUNTEERS,
+          resources: SEED_RESOURCES
+        };
+        localStorage.setItem('sahyog_odisha_mock_db', JSON.stringify(initial));
+        return initial;
+      }
+      return JSON.parse(db);
+    }
+
+    function saveLocalDB(data) {
+      localStorage.setItem('sahyog_odisha_mock_db', JSON.stringify(data));
+    }
+
+    // --- 4. HYBRID API CLIENT (ONLINE / SERVERLESS / OFFLINE) ---
+    async function api(endpoint, method = 'GET', body = null) {
+      const token = localStorage.getItem('sahyog_token');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token && token !== 'mock-local-token') headers['Authorization'] = 'Bearer ' + token;
+
+      if (window.location.protocol === 'file:') {
+        isServerConnected = false;
+        setModeBanner(false);
+        return handleLocalMockApi(endpoint, method, body);
+      }
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
+
+      try {
+        const res = await fetch(API_BASE + endpoint, {
+          method,
+          headers,
+          body: body ? JSON.stringify(body) : undefined,
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        const contentType = res.headers.get('content-type') || '';
+        if (!contentType.includes('application/json')) {
+          console.warn('Non-JSON response for ' + endpoint + '. Using local engine.');
+          isServerConnected = false;
+          setModeBanner(false);
+          return handleLocalMockApi(endpoint, method, body);
+        }
+
+        const data = await res.json();
+        if (res.status === 404) {
+          isServerConnected = false;
+          setModeBanner(false);
+          return handleLocalMockApi(endpoint, method, body);
+        }
+
+        if (!res.ok) {
+          const err = new Error(data.error || data.message || ('HTTP ' + res.status));
+          err.status = res.status;
+          throw err;
+        }
+
+        isServerConnected = true;
+        setModeBanner(true);
+        return data;
+
+      } catch (err) {
+        clearTimeout(timeoutId);
+        if (err.status && err.status >= 400 && err.status < 500 && err.status !== 404) {
+          throw err;
+        }
+        isServerConnected = false;
+        setModeBanner(false);
+        return handleLocalMockApi(endpoint, method, body);
+      }
+    }
+
+    function setModeBanner(connected) {
+      const icon = document.getElementById('modeIcon');
+      const text = document.getElementById('modeText');
+      const sseInd = document.getElementById('sseIndicator');
+      const sseTxt = document.getElementById('sseStatusText');
+
+      if (!icon || !text) return;
+
+      if (connected) {
+        icon.className = 'w-2 h-2 rounded-full bg-emerald-400';
+        text.innerHTML = '🟢 <strong>Connected:</strong> Live SahyogAI Backend • Brahmapur Crisis Grid (<code class="bg-slate-700 px-1 rounded text-orange-300">' + window.location.origin + '</code>)';
+        if (sseInd) sseInd.className = 'w-2 h-2 rounded-full bg-emerald-500 inline-block';
+        if (sseTxt) sseTxt.textContent = 'Live Sync';
+      } else {
+        icon.className = 'w-2 h-2 rounded-full bg-amber-400';
+        text.innerHTML = '💻 <strong>Antigravity Offline Mode:</strong> Local AI-heuristic triage, duplicate search, & Brahmapur map active in-browser.';
+        if (sseInd) sseInd.className = 'w-2 h-2 rounded-full bg-amber-400 inline-block';
+        if (sseTxt) sseTxt.textContent = 'Offline Store';
+      }
+    }
+
+    function handleLocalMockApi(endpoint, method, body) {
+      const db = getLocalDB();
+
+      if (endpoint === '/health') {
+        return { status: 'ok', service: 'SahyogAI Odisha', operationalSector: 'Brahmapur, Ganjam' };
+      }
+      if (endpoint === '/auth/me') {
+        return { success: true, user: currentUser || { displayName: "Demo Coordinator (BeMC)", role: "coordinator", username: "coordinator" } };
+      }
+      if (endpoint === '/auth/login') {
+        const u = { displayName: "Coordinator Debashis (BeMC)", role: "coordinator", username: body.username || "coordinator" };
+        currentUser = u;
+        return { success: true, token: 'mock-local-token', user: u };
+      }
+      if (endpoint.split('?')[0] === '/incidents' && method === 'GET') {
+        return { success: true, data: db.incidents, meta: { total: db.incidents.length } };
+      }
+      if (endpoint === '/incidents' && method === 'POST') {
+        const newInc = {
+          _id: 'inc-local-' + Date.now(),
+          ref: 'INC-BAM-' + Date.now().toString(36).slice(-4).toUpperCase(),
+          ...body,
+          status: 'submitted',
+          effectiveUrgency: body.reportedCategory === 'Medical Emergency' || body.originalReport?.toLowerCase().includes('danga') ? 'Critical' : 'High',
+          createdAt: new Date().toISOString(),
+          aiTriage: {
+            source: 'fallback',
+            model: 'rule-based-odisha-v2',
+            recommendedUrgency: 'Critical',
+            incidentTitle: (body.reportedCategory || 'Emergency') + ' — Brahmapur Sector',
+            summary: body.originalReport.slice(0, 140),
+            immediateNeeds: ["Rapid Assessment Team"],
+            hazards: ["Floodwater ingress"],
+            confidence: "medium"
+          }
+        };
+        db.incidents.unshift(newInc);
+        saveLocalDB(db);
+        return { success: true, data: newInc };
+      }
+      if (endpoint.split('?')[0] === '/volunteers' && method === 'GET') {
+        return { success: true, data: db.volunteers };
+      }
+      if (endpoint.split('?')[0] === '/resources' && method === 'GET') {
+        return { success: true, data: db.resources };
+      }
+      if (endpoint === '/analytics/summary') {
+        return {
+          success: true,
+          data: {
+            incidents: { total: db.incidents.length, critical: 3, open: db.incidents.length },
+            volunteers: { total: db.volunteers.length, available: 4 },
+            resources: { total: db.resources.length }
+          }
+        };
+      }
+
+      return { success: true, data: [] };
+    }
+
+    // --- 5. VOICE SOS (MIC WEBSPEECH API) ---
+    function triggerVoiceDirectly() {
+      setTimeout(() => {
+        toggleVoiceSOS();
+      }, 350);
+    }
+
+    function initVoiceRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        showToast('Voice speech recognition not supported in this browser. Please type or use Google Chrome/Edge.', 'warning');
+        return null;
+      }
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = currentLang === 'or' ? 'or-IN' : 'en-IN';
+      return recognition;
+    }
+
+    function toggleVoiceSOS() {
+      const micBtn = document.getElementById('voiceSosBtn');
+      const micIcon = document.getElementById('voiceMicIcon');
+      const micStatus = document.getElementById('voiceMicStatus');
+      const reportInput = document.getElementById('sosReportText');
+
+      if (isRecordingVoice) {
+        if (speechRecognitionInstance) speechRecognitionInstance.stop();
+        isRecordingVoice = false;
+        return;
+      }
+
+      speechRecognitionInstance = initVoiceRecognition();
+      if (!speechRecognitionInstance) return;
+
+      speechRecognitionInstance.onstart = () => {
+        isRecordingVoice = true;
+        micBtn.classList.add('bg-red-600', 'text-white', 'mic-recording-pulse', 'border-red-600');
+        micBtn.classList.remove('bg-white', 'text-orange-600', 'border-orange-400');
+        micStatus.textContent = currentLang === 'or' ? 'ଶୁଣୁଛି... ଆପଣଙ୍କ ଜରୁରୀ ସମସ୍ୟା କୁହନ୍ତୁ (Listening...)' : 'Listening... Speak your emergency now';
+      };
+
+      speechRecognitionInstance.onresult = (event) => {
+        let transcript = '';
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          transcript += event.results[i][0].transcript;
+        }
+        if (transcript) {
+          reportInput.value = (reportInput.value ? reportInput.value + ' ' : '') + transcript;
+          updateCharCount();
+        }
+      };
+
+      speechRecognitionInstance.onerror = (event) => {
+        console.warn('Speech recognition error:', event.error);
+        isRecordingVoice = false;
+        micBtn.classList.remove('bg-red-600', 'text-white', 'mic-recording-pulse', 'border-red-600');
+        micBtn.classList.add('bg-white', 'text-orange-600', 'border-orange-400');
+        micStatus.textContent = currentLang === 'or' ? 'ମାଇକ୍ ଚିପି କୁହନ୍ତୁ (Press to speak)' : 'Press Mic & Speak Your Emergency';
+      };
+
+      speechRecognitionInstance.onend = () => {
+        isRecordingVoice = false;
+        micBtn.classList.remove('bg-red-600', 'text-white', 'mic-recording-pulse', 'border-red-600');
+        micBtn.classList.add('bg-white', 'text-orange-600', 'border-orange-400');
+        micStatus.textContent = currentLang === 'or' ? 'ମାଇକ୍ ଚିପି କୁହନ୍ତୁ (Press to speak)' : 'Press Mic & Speak Your Emergency';
+      };
+
+      try {
+        speechRecognitionInstance.start();
+      } catch (err) {
+        console.error('Speech recognition start failed:', err);
+      }
+    }
+
+    // --- 6. 1-TAP NEED CHIPS ---
+    function applyNeedChip(type) {
+      const report = document.getElementById('sosReportText');
+      const cat = document.getElementById('sosCategorySelect');
+
+      if (type === 'boat') {
+        cat.value = 'Flooding';
+        report.value = (report.value ? report.value + ' | ' : '') + (currentLang === 'or' ? 'ପାଣି ପଶିଯାଇଛି, ଛାତ ଉପରେ ଫସିଛୁ। ତୁରନ୍ତ ଉଦ୍ଧାରକାରୀ ଡଙ୍ଗା (ODRAF Boat) ପଠାନ୍ତୁ।' : 'Urgent rescue boat needed. Water entered house/terrace. Send ODRAF boat immediately.');
+      } else if (type === 'medical') {
+        cat.value = 'Medical Emergency';
+        report.value = (report.value ? report.value + ' | ' : '') + (currentLang === 'or' ? 'ଜରୁରୀ ଚିକିତ୍ସା ଓ ଆମ୍ବୁଲାନ୍ସ ଆବଶ୍ୟକ (ଏମକେସିଜି ଡାକ୍ତରଖାନା / MKCG Hospital)।' : 'Critical medical emergency. Patient needs urgent transport to MKCG Hospital.');
+      } else if (type === 'water') {
+        cat.value = 'Food & Drinking Water';
+        report.value = (report.value ? report.value + ' | ' : '') + (currentLang === 'or' ? 'ପାନୀୟ ଜଳ ନାହିଁ, ଜଳ ଉତ୍ସ ବନ୍ୟା ପାଣିରେ ବୁଡ଼ିଯାଇଛି। ପିଇବା ପାଣି ଦରକାର।' : 'Safe drinking water urgently required. Surrounding water sources contaminated.');
+      } else if (type === 'food') {
+        cat.value = 'Food & Drinking Water';
+        report.value = (report.value ? report.value + ' | ' : '') + (currentLang === 'or' ? 'ଶୁଖିଲା ଖାଦ୍ୟ (ଚୁଡ଼ା ଓ ଗୁଡ଼ ପ୍ୟାକେଟ) ତୁରନ୍ତ ଦରକାର।' : 'Emergency dry ration packets (Chuda/Gur) needed.');
+      } else if (type === 'trapped') {
+        cat.value = 'Trapped / Missing People';
+        report.value = (report.value ? report.value + ' | ' : '') + (currentLang === 'or' ? 'ପରିବାର ସଦସ୍ୟ ଛାତ ଉପରେ ଫସିଛନ୍ତି, ପାଣି ବଢୁଛି।' : 'Family members stranded on terrace/rooftop. Water level rising fast.');
+      } else if (type === 'electric') {
+        cat.value = 'Roadblock & Fallen Trees';
+        report.value = (report.value ? report.value + ' | ' : '') + (currentLang === 'or' ? '୧୧ କେଭି ବିଦ୍ୟୁତ ତାର ଛିଣ୍ଡି ପାଣିରେ ପଡ଼ିଛି, ବିପଦ ଅଛି।' : '11kV live power cable snapped into water. Electrocution hazard.');
+      }
+
+      updateCharCount();
+      report.focus();
+    }
+
+    function selectBrahmapurLandmark(val) {
+      if (!val) return;
+      document.getElementById('sosLocationText').value = val;
+    }
+
+    // --- 7. GPS GRAB ---
+    function grabCurrentGPS() {
+      const badge = document.getElementById('gpsStatusBadge');
+      const text = document.getElementById('gpsStatusText');
+
+      if (!navigator.geolocation) {
+        showToast('Geolocation is not supported by your browser.', 'error');
+        return;
+      }
+
+      badge.classList.remove('hidden');
+      text.textContent = 'Acquiring Brahmapur satellite fix...';
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          capturedCoordinates = {
+            lat: pos.coords.latitude,
+            lng: pos.coords.longitude,
+            accuracy: Math.round(pos.coords.accuracy),
+            source: 'gps'
+          };
+          text.textContent = '📍 Lat: ' + capturedCoordinates.lat.toFixed(4) + ', Lng: ' + capturedCoordinates.lng.toFixed(4) + ' (±' + capturedCoordinates.accuracy + 'm accuracy)';
+          badge.className = 'text-xs text-emerald-600 font-semibold mt-1.5 flex items-center gap-1';
+          showToast('GPS coordinates locked successfully.', 'success');
+        },
+        (err) => {
+          text.textContent = 'Could not acquire GPS: ' + err.message;
+          badge.className = 'text-xs text-amber-600 font-semibold mt-1.5 flex items-center gap-1';
+        },
+        { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
+      );
+    }
+
+    // --- 8. SUBMIT SOS ---
+    async function submitSOS(e) {
+      e.preventDefault();
+      const report = document.getElementById('sosReportText').value.trim();
+      const location = document.getElementById('sosLocationText').value.trim();
+      const category = document.getElementById('sosCategorySelect').value || null;
+      const countRange = document.getElementById('sosPeopleCount').value;
+      const phone = document.getElementById('sosContactPhone').value.trim();
+
+      if (!report || !location) {
+        showToast('Please provide emergency details and location.', 'warning');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btnSubmitSOS');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="inline-block animate-spin mr-2">⟳</span> AI Triaging in Progress...';
+
+      const payload = {
+        originalReport: report,
+        locationDescription: location,
+        reportedCategory: category,
+        affectedCountRange: countRange,
+        contactPhone: phone || undefined,
+        coordinates: capturedCoordinates || { lat: 19.3149, lng: 84.7941, source: 'manual' }
+      };
+
+      try {
+        const res = await api('/incidents', 'POST', payload);
+        const inc = res.data;
+
+        // Display Receipt Card
+        document.getElementById('receiptRefBadge').textContent = inc.ref;
+        document.getElementById('receiptRefValue').textContent = inc.ref;
+        document.getElementById('sosReceiptCard').classList.remove('hidden');
+        document.getElementById('sosForm').classList.add('hidden');
+
+        showToast('Emergency registered: ' + inc.ref + '. Urgency: ' + (inc.effectiveUrgency || 'Critical'), 'success');
+        
+        fetchIncidents();
+      } catch (err) {
+        showToast('Submission notice: ' + err.message, 'info');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-paper-plane mr-2"></i> Submit SOS & Run AI Triage';
+      }
+    }
+
+    function resetSOSForm() {
+      document.getElementById('sosReportText').value = '';
+      document.getElementById('sosLocationText').value = '';
+      document.getElementById('sosReceiptCard').classList.add('hidden');
+      document.getElementById('sosForm').classList.remove('hidden');
+      updateCharCount();
+    }
+
+    function copyReceiptRef() {
+      const ref = document.getElementById('receiptRefValue').textContent;
+      navigator.clipboard.writeText(ref);
+      showToast('Reference copied to clipboard: ' + ref, 'success');
+    }
+
+    // --- 9. TRACKING MODAL ---
+    function openTrackModal() {
+      document.getElementById('trackModal').classList.remove('hidden');
+      document.getElementById('trackInputRef').focus();
+    }
+    function closeTrackModal() {
+      document.getElementById('trackModal').classList.add('hidden');
+      document.getElementById('trackResultBox').classList.add('hidden');
+    }
+
+    async function lookupTrackStatus() {
+      const ref = document.getElementById('trackInputRef').value.trim().toUpperCase();
+      const box = document.getElementById('trackResultBox');
+      if (!ref) return;
+
+      const db = getLocalDB();
+      const match = db.incidents.find(i => i.ref === ref || (i.ref && i.ref.endsWith(ref)));
+
+      box.classList.remove('hidden');
+      if (match) {
+        box.innerHTML = \`
+          <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
+            <div class="flex justify-between font-bold text-slate-900">
+              <span>\${match.ref}</span>
+              <span class="text-xs uppercase px-2 py-0.5 rounded bg-emerald-200 text-emerald-800">\${match.status}</span>
+            </div>
+            <p class="text-slate-600 mt-1"><strong>Location:</strong> \${match.locationDescription}</p>
+            <p class="text-slate-600"><strong>Urgency:</strong> <span class="text-red-600 font-bold">\${match.effectiveUrgency}</span></p>
+            <p class="text-slate-600"><strong>AI Assessment:</strong> \${match.aiTriage?.summary || 'Under review by Brahmapur EOC'}</p>
+          </div>
+        \`;
+      } else {
+        box.innerHTML = \`
+          <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800">
+            No incident matching <strong>\${ref}</strong> found. Ensure the code is exact or check your connection.
+          </div>
+        \`;
+      }
+    }
+
+    // --- 10. LEAFLET MAPS INTEGRATION (BRAHMAPUR, GANJAM) ---
+    function initMaps() {
+      if (overviewMap) return;
+      const mapEl = document.getElementById('liveOverviewMap');
+      if (!mapEl) return;
+
+      // Brahmapur coordinates: 19.3149, 84.7941
+      overviewMap = L.map('liveOverviewMap').setView([19.3149, 84.7941], 12);
+
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors | OSDMA Brahmapur'
+      }).addTo(overviewMap);
+
+      overviewMarkersLayer = L.layerGroup().addTo(overviewMap);
+      renderMapMarkers();
+    }
+
+    function renderMapMarkers() {
+      if (!overviewMarkersLayer || !overviewMap) return;
+      overviewMarkersLayer.clearLayers();
+
+      const db = getLocalDB();
+      (db.incidents || []).forEach(inc => {
+        if (!inc.coordinates || !inc.coordinates.lat || !inc.coordinates.lng) return;
+
+        const isCritical = inc.effectiveUrgency === 'Critical';
+        const color = isCritical ? '#DC2626' : (inc.effectiveUrgency === 'High' ? '#D97706' : '#4F46E5');
+
+        const circle = L.circleMarker([inc.coordinates.lat, inc.coordinates.lng], {
+          radius: isCritical ? 9 : 7,
+          fillColor: color,
+          color: '#FFFFFF',
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.85
+        });
+
+        circle.bindPopup(\`
+          <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4;">
+            <strong style="color: #0F172A;">\${inc.ref}</strong>
+            <span style="display:inline-block; margin-left:4px; padding: 1px 6px; border-radius:4px; font-weight:bold; background:\${color}20; color:\${color}">\${inc.effectiveUrgency}</span>
+            <div style="margin-top:4px; color:#475569;">\${inc.locationDescription}</div>
+            <div style="margin-top:4px; font-weight:600;">\${inc.originalReport.slice(0, 80)}...</div>
+          </div>
+        \`);
+
+        overviewMarkersLayer.addLayer(circle);
+      });
+    }
+
+    // --- 11. DATA FETCHERS & UI RENDERING ---
+    async function fetchIncidents(isSilent = false) {
+      try {
+        const res = await api('/incidents');
+        incidents = res.data || [];
+        renderIncidentsGrid();
+        renderMapMarkers();
+        updateKPIs();
+      } catch (err) {
+        if (!isSilent) console.warn('Fetch incidents fallback to local store.');
+        const db = getLocalDB();
+        incidents = db.incidents;
+        renderIncidentsGrid();
+        renderMapMarkers();
+        updateKPIs();
+      }
+    }
+
+    function renderIncidentsGrid() {
+      const container = document.getElementById('incidentsGrid');
+      if (!container) return;
+
+      if (!incidents.length) {
+        container.innerHTML = '<div class="p-8 text-center text-slate-400 bg-white rounded-2xl border border-slate-200">No active incidents reported.</div>';
+        return;
+      }
+
+      container.innerHTML = incidents.map(inc => {
+        const isCritical = inc.effectiveUrgency === 'Critical';
+        const badgeClass = isCritical ? 'badge-critical' : (inc.effectiveUrgency === 'High' ? 'badge-high' : 'badge-medium');
+        const dateStr = new Date(inc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        return \`
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:border-orange-300 transition space-y-3 cursor-pointer" onclick="openIncidentDetail('\${inc._id || inc.id}')">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2.5 py-1 rounded">\${inc.ref}</span>
+                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full \${badgeClass}">\${inc.effectiveUrgency}</span>
+                <span class="text-xs text-slate-500 font-semibold">\${inc.category || 'General'}</span>
+              </div>
+              <span class="text-xs text-slate-400 font-mono">\${dateStr}</span>
+            </div>
+            
+            <div>
+              <h4 class="font-bold text-slate-900 text-sm leading-snug">\${inc.aiTriage?.incidentTitle || inc.locationDescription}</h4>
+              <p class="text-xs text-slate-600 mt-1 line-clamp-2">\${inc.originalReport}</p>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
+              <div class="flex items-center gap-1 text-slate-500">
+                <i class="fa-solid fa-location-dot text-orange-600"></i>
+                <span class="truncate max-w-xs">\${inc.locationDescription}</span>
+              </div>
+              <span class="font-bold uppercase tracking-wider text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded">\${inc.status}</span>
+            </div>
+          </div>
+        \`;
+      }).join('');
+    }
+
+    function updateKPIs() {
+      const criticalCount = incidents.filter(i => i.effectiveUrgency === 'Critical' && i.status !== 'resolved').length;
+      const kpiEl = document.getElementById('kpiCriticalCount');
+      if (kpiEl) kpiEl.textContent = criticalCount;
+    }
+
+    function filterUrgency(urgency) {
+      ['all', 'critical', 'high', 'medium', 'low'].forEach(u => {
+        const el = document.getElementById('filter-' + u);
+        if (el) {
+          el.className = 'px-3 py-1.5 rounded-lg text-xs font-bold transition ' + (u === urgency.toLowerCase() ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200');
+        }
+      });
+
+      const db = getLocalDB();
+      if (urgency === 'ALL') {
+        incidents = db.incidents;
+      } else {
+        incidents = db.incidents.filter(i => i.effectiveUrgency === urgency);
+      }
+      renderIncidentsGrid();
+    }
+
+    function openIncidentDetail(id) {
+      const db = getLocalDB();
+      const inc = incidents.find(i => i._id === id || i.id === id) || db.incidents.find(i => i._id === id);
+      if (!inc) return;
+
+      currentModalIncident = inc;
+      document.getElementById('modalRef').textContent = inc.ref;
+      document.getElementById('modalUrgencyBadge').textContent = inc.effectiveUrgency;
+      document.getElementById('modalUrgencyBadge').className = 'ml-2 text-xs font-bold px-2 py-0.5 rounded ' + (inc.effectiveUrgency === 'Critical' ? 'badge-critical' : 'badge-high');
+
+      const body = document.getElementById('modalBody');
+      body.innerHTML = \`
+        <div class="space-y-3 text-xs text-slate-700">
+          <div>
+            <strong class="text-slate-900 block text-sm">Location:</strong>
+            <span class="text-slate-600">\${inc.locationDescription}</span>
+          </div>
+          <div>
+            <strong class="text-slate-900 block text-sm">Emergency Report:</strong>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 mt-1">\${inc.originalReport}</div>
+          </div>
+          \${inc.aiTriage ? \`
+            <div class="p-3 bg-orange-50 rounded-xl border border-orange-200 text-orange-950 space-y-1.5">
+              <span class="font-bold block text-sm text-orange-900"><i class="fa-solid fa-robot"></i> AI Triage Assessment (\${inc.aiTriage.source}):</span>
+              <div><strong>Summary:</strong> \${inc.aiTriage.summary}</div>
+              <div><strong>Immediate Needs:</strong> \${(inc.aiTriage.immediateNeeds || []).join(', ')}</div>
+            </div>
+          \` : ''}
+          <div>
+            <strong class="text-slate-900 block">Status:</strong>
+            <span class="font-mono uppercase font-bold text-orange-700">\${inc.status}</span>
+          </div>
+        </div>
+      \`;
+
+      const actions = document.getElementById('modalActions');
+      actions.innerHTML = \`
+        <button onclick="updateIncidentStatus('\${inc._id || inc.id}', 'verified')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs">Verify Incident</button>
+        <button onclick="updateIncidentStatus('\${inc._id || inc.id}', 'resolved')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">Mark Resolved</button>
+      \`;
+
+      document.getElementById('incidentModal').classList.remove('hidden');
+
+      setTimeout(() => {
+        if (!modalMiniMap) {
+          modalMiniMap = L.map('miniMap').setView([inc.coordinates?.lat || 19.3149, inc.coordinates?.lng || 84.7941], 14);
+          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(modalMiniMap);
+        } else {
+          modalMiniMap.setView([inc.coordinates?.lat || 19.3149, inc.coordinates?.lng || 84.7941], 14);
+        }
+      }, 200);
+    }
+
+    function closeIncidentModal() {
+      document.getElementById('incidentModal').classList.add('hidden');
+    }
+
+    function updateIncidentStatus(id, newStatus) {
+      const db = getLocalDB();
+      const inc = db.incidents.find(i => i._id === id || i.id === id);
+      if (inc) {
+        inc.status = newStatus;
+        saveLocalDB(db);
+        showToast('Incident status updated to ' + newStatus, 'success');
+        closeIncidentModal();
+        fetchIncidents();
+      }
+    }
+
+    // --- 12. VOLUNTEERS & RESOURCES FETCHERS ---
+    async function fetchVolunteers() {
+      const res = await api('/volunteers');
+      volunteersList = res.data || SEED_VOLUNTEERS;
+      const tbody = document.getElementById('volunteersTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = volunteersList.map(v => \`
+        <tr class="hover:bg-slate-50 transition">
+          <td class="py-3 px-4 font-bold text-slate-900">\${v.displayName}</td>
+          <td class="py-3 px-4 text-slate-600">\${v.profile?.teamAffiliation || 'Volunteer'}<br><span class="text-[11px] text-slate-400">\${v.profile?.serviceArea || 'Brahmapur'}</span></td>
+          <td class="py-3 px-4 text-slate-500">\${(v.profile?.skills || []).join(', ')}</td>
+          <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase">\${v.profile?.availability || 'Available'}</span></td>
+          <td class="py-3 px-4 text-right"><button class="bg-orange-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-orange-700">Dispatch</button></td>
+        </tr>
+      \`).join('');
+    }
+
+    async function fetchResources() {
+      const res = await api('/resources');
+      resourcesList = res.data || SEED_RESOURCES;
+      const grid = document.getElementById('resourcesGrid');
+      if (!grid) return;
+
+      grid.innerHTML = resourcesList.map(r => {
+        const avail = Math.max(0, r.quantityTotal - (r.quantityReserved || 0) - (r.quantityDispatched || 0));
+        return \`
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-orange-600">\${r.resourceType}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 font-mono">\${r.ref || 'RES'}</span>
+            </div>
+            <h4 class="font-bold text-slate-900 text-base leading-snug">\${r.name}</h4>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-black text-slate-900">\${avail}</span>
+              <span class="text-xs text-slate-500 font-bold uppercase">\${r.unit} available</span>
+            </div>
+            <div class="text-[11px] text-slate-500 space-y-1 border-t border-slate-100 pt-2">
+              <div>Depot: <strong>\${r.storageLocation || 'BeMC Hub'}</strong></div>
+              <div>Authority: <strong>\${r.responsibleOrg || 'OSDMA Ganjam'}</strong></div>
+            </div>
+          </div>
+        \`;
+      }).join('');
+    }
+
+    // --- 13. CHARTS & ANALYTICS ---
+    function loadAnalytics() {
+      const ctxUrgency = document.getElementById('urgencyChart')?.getContext('2d');
+      const ctxCategory = document.getElementById('categoryChart')?.getContext('2d');
+
+      if (ctxUrgency) {
+        new Chart(ctxUrgency, {
+          type: 'doughnut',
+          data: {
+            labels: ['Critical', 'High', 'Medium', 'Low'],
+            datasets: [{
+              data: [3, 2, 1, 0],
+              backgroundColor: ['#DC2626', '#F59E0B', '#4F46E5', '#10B981']
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+
+      if (ctxCategory) {
+        new Chart(ctxCategory, {
+          type: 'bar',
+          data: {
+            labels: ['Flooding', 'Medical', 'Food/Water', 'Live Wire'],
+            datasets: [{
+              label: 'Incidents in Brahmapur',
+              data: [3, 2, 1, 1],
+              backgroundColor: '#EA580C'
+            }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      }
+    }
+
+    // --- 14. REALTIME HYBRID SSE WITH POLLING FALLBACK ---
+    let sseErrorCount = 0;
+    let pollingInterval = null;
+
+    function initSSE() {
+      if (sseSource) sseSource.close();
+      if (pollingInterval) clearInterval(pollingInterval);
+
+      try {
+        sseSource = new EventSource('/api/events');
+        sseSource.onopen = () => {
+          sseErrorCount = 0;
+          setModeBanner(true);
+        };
+        sseSource.onerror = () => {
+          sseErrorCount++;
+          if (sseErrorCount >= 2) {
+            console.warn('[Realtime] SSE stream unavailable on serverless. Enabling 8s polling fallback.');
+            if (sseSource) {
+              sseSource.close();
+              sseSource = null;
+            }
+            setModeBanner(true);
+            if (!pollingInterval) {
+              pollingInterval = setInterval(() => {
+                fetchIncidents(true);
+              }, 8000);
+            }
+          }
+        };
+
+        sseSource.addEventListener('incident:created', () => fetchIncidents(true));
+        sseSource.addEventListener('incident:updated', () => fetchIncidents(true));
+        sseSource.addEventListener('incident:status_changed', () => fetchIncidents(true));
+      } catch (err) {}
+    }
+
+    // --- 15. NAVIGATION CONTROLLER ---
+    function navigate(screenName) {
+      ['home', 'action', 'result', 'volunteers', 'resources', 'analytics'].forEach(s => {
+        const el = document.getElementById('screen-' + s);
+        const navEl = document.getElementById('nav-' + s);
+        if (el) el.classList.add('hidden');
+        if (navEl) navEl.classList.remove('active', 'text-orange-600', 'bg-orange-50');
+      });
+
+      const target = document.getElementById('screen-' + screenName);
+      const navTarget = document.getElementById('nav-' + screenName);
+      if (target) target.classList.remove('hidden');
+      if (navTarget) navTarget.classList.add('active', 'text-orange-600', 'bg-orange-50');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (screenName === 'home') {
+        setTimeout(initMaps, 100);
+      }
+      if (screenName === 'result') fetchIncidents();
+      if (screenName === 'volunteers') fetchVolunteers();
+      if (screenName === 'resources') fetchResources();
+      if (screenName === 'analytics') loadAnalytics();
+    }
+
+    function toggleMobileNav() {
+      document.getElementById('mobileNavDrawer').classList.toggle('hidden');
+    }
+    function closeMobileNav() {
+      document.getElementById('mobileNavDrawer').classList.add('hidden');
+    }
+
+    // --- 16. AUTHENTICATION & SESSION HANDLING ---
+    async function initAuth() {
+      const token = localStorage.getItem('sahyog_token');
+      if (!token) {
+        currentUser = { displayName: "Demo Coordinator (BeMC)", role: "coordinator", username: "coordinator" };
+        renderAuthUI(currentUser);
+        return;
+      }
+      try {
+        const res = await api('/auth/me');
+        currentUser = res.user || { displayName: "Demo Coordinator (BeMC)", role: "coordinator", username: "coordinator" };
+        renderAuthUI(currentUser);
+      } catch (err) {
+        currentUser = { displayName: "Demo Coordinator (BeMC)", role: "coordinator", username: "coordinator" };
+        renderAuthUI(currentUser);
+      }
+    }
+
+    function renderAuthUI(user) {
+      const container = document.getElementById('authContainer');
+      if (!container) return;
+      if (user) {
+        container.innerHTML = \`
+          <span class="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-user-shield text-orange-600"></i>
+            <span>\${user.displayName || user.username}</span>
+          </span>
+          <button onclick="handleLogout()" class="text-xs text-slate-500 hover:text-red-600 font-semibold px-2 py-1">Logout</button>
+        \`;
+      } else {
+        container.innerHTML = \`
+          <button onclick="openLoginModal()" class="text-xs font-bold bg-slate-900 text-white px-3.5 py-1.5 rounded-lg hover:bg-slate-800 transition">
+            Sign In
+          </button>
+        \`;
+      }
+    }
+
+    function openLoginModal() { document.getElementById('loginModal').classList.remove('hidden'); }
+    function closeLoginModal() { document.getElementById('loginModal').classList.add('hidden'); }
+
+    async function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById('loginUsername').value.trim();
+      const p = document.getElementById('loginPassword').value.trim();
+      try {
+        const res = await api('/auth/login', 'POST', { username: u, password: p });
+        localStorage.setItem('sahyog_token', res.token);
+        currentUser = res.user;
+        renderAuthUI(currentUser);
+        closeLoginModal();
+        showToast('Signed in successfully.', 'success');
+      } catch (err) {
+        showToast('Login failed: ' + err.message, 'error');
+      }
+    }
+
+    function handleLogout() {
+      localStorage.removeItem('sahyog_token');
+      currentUser = null;
+      renderAuthUI(null);
+      showToast('Logged out.', 'info');
+    }
+
+    // --- 17. TOAST NOTIFICATIONS & UTILITIES ---
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-600 text-white shadow-emerald-600/30',
+        error: 'bg-red-600 text-white shadow-red-600/30',
+        warning: 'bg-amber-500 text-white shadow-amber-500/30',
+        info: 'bg-slate-900 text-white shadow-slate-900/30'
+      };
+
+      toast.className = 'px-4 py-3 rounded-xl font-bold text-xs shadow-lg flex items-center gap-2 transform transition-all duration-300 pointer-events-auto ' + (colors[type] || colors.info);
+      toast.innerHTML = '<span>' + msg + '</span>';
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function updateCharCount() {
+      const el = document.getElementById('sosReportText');
+      const countEl = document.getElementById('charCount');
+      if (el && countEl) countEl.textContent = el.value.length + ' / 5000 chars';
+    }
+
+    // Startup Initialization
+    window.addEventListener('DOMContentLoaded', async () => {
+      document.getElementById('sosReportText')?.addEventListener('input', updateCharCount);
+      await initAuth();
+      initMaps();
+      initSSE();
+      await fetchIncidents();
+      applyTranslations();
+    });
+  </script>
+
+  <!-- Offline-First Architecture Hook -->
+  <script src="/offline/offlineDB.js"></script>
+  <script src="/offline/syncEngine.js"></script>
+  <script src="/offline/OfflineStatusBanner.js"></script>
+  <script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');</script>
+</body>
+</html>
