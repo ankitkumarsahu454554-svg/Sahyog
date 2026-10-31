@@ -782,13 +782,20 @@
         dispatch_subtitle: "OSDMA, Ganjam District Administration & BeMC Central Incident Queue"
       },
       or: {
-      ctrl_room_title: "ଗଞ୍ଜାମ ଓ ବ୍ରହ୍ମପୁର ଜରୁରୀକାଳୀନ କେନ୍ଦ୍ର",
-      tel_ganjam_label: "ଗଞ୍ଜାମ ଜିଲ୍ଲାପାଳ କାର୍ଯ୍ୟାଳୟ",
-      tel_mkcg_label: "ଏମକେସିଜି ଡାକ୍ତରଖାନା",
-      tel_bemc_label: "ବ୍ରହ୍ମପୁର ମହାନଗର ନିଗମ",
-      tel_nat_label: "ଜାତୀୟ ଜରୁରୀକାଳୀନ",
-      speed_dial_title: "ବ୍ୟାଟେରୀ ସରୁଛି କି? ତୁରନ୍ତ ଫୋନ୍ କରନ୍ତୁ",
-      speed_dial_sub: "ବ୍ରହ୍ମପୁର ଉଦ୍ଧାରକାରୀ ଦଳଙ୍କୁ ସିଧାସଳଖ କଲ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ",
+      ctrl_room_title: "ଗଞ୍ଜାମ ଓ ବ୍ରହ୍ମପୁର ଜରୁରୀକାଳୀନ କେନ୍ଦ୍ର",
+
+      tel_ganjam_label: "ଗଞ୍ଜାମ ଜିଲ୍ଲାପାଳ କାର୍ଯ୍ୟାଳୟ",
+
+      tel_mkcg_label: "ଏମକେସିଜି ଡାକ୍ତରଖାନା",
+
+      tel_bemc_label: "ବ୍ରହ୍ମପୁର ମହାନଗର ନିଗମ",
+
+      tel_nat_label: "ଜାତୀୟ ଜରୁରୀକାଳୀନ",
+
+      speed_dial_title: "ବ୍ୟାଟେରୀ ସରୁଛି କି? ତୁରନ୍ତ ଫୋନ୍ କରନ୍ତୁ",
+
+      speed_dial_sub: "ବ୍ରହ୍ମପୁର ଉଦ୍ଧାରକାରୀ ଦଳଙ୍କୁ ସିଧାସଳଖ କଲ୍ କରିବାକୁ ଟ୍ୟାପ୍ କରନ୍ତୁ",
+
         nav_home: "ମୁଖ୍ୟ ପୃଷ୍ଠା",
         nav_action: "ଜରୁରୀ ସହାୟତା",
         nav_result: "ଡିସପାଚ୍ ବୋର୍ଡ",
@@ -1339,7 +1346,7 @@
       }
 
       updateCharCount();
-      report.focus();
+      if (report && typeof report.focus === 'function') { try { report.focus(); } catch (_) {} }
     }
 
     function selectBrahmapurLandmark(val) {
@@ -1445,7 +1452,7 @@
     // --- 9. TRACKING MODAL ---
     function openTrackModal() {
       document.getElementById('trackModal').classList.remove('hidden');
-      document.getElementById('trackInputRef').focus();
+      const tIn = document.getElementById('trackInputRef'); if (tIn && typeof tIn.focus === 'function') tIn.focus();
     }
     function closeTrackModal() {
       document.getElementById('trackModal').classList.add('hidden');
@@ -1462,23 +1469,23 @@
 
       box.classList.remove('hidden');
       if (match) {
-        box.innerHTML = \`
+        box.innerHTML = `
           <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200">
             <div class="flex justify-between font-bold text-slate-900">
-              <span>\${match.ref}</span>
-              <span class="text-xs uppercase px-2 py-0.5 rounded bg-emerald-200 text-emerald-800">\${match.status}</span>
+              <span>${match.ref}</span>
+              <span class="text-xs uppercase px-2 py-0.5 rounded bg-emerald-200 text-emerald-800">${match.status}</span>
             </div>
-            <p class="text-slate-600 mt-1"><strong>Location:</strong> \${match.locationDescription}</p>
-            <p class="text-slate-600"><strong>Urgency:</strong> <span class="text-red-600 font-bold">\${match.effectiveUrgency}</span></p>
-            <p class="text-slate-600"><strong>AI Assessment:</strong> \${match.aiTriage?.summary || 'Under review by Brahmapur EOC'}</p>
+            <p class="text-slate-600 mt-1"><strong>Location:</strong> ${match.locationDescription}</p>
+            <p class="text-slate-600"><strong>Urgency:</strong> <span class="text-red-600 font-bold">${match.effectiveUrgency}</span></p>
+            <p class="text-slate-600"><strong>AI Assessment:</strong> ${match.aiTriage?.summary || 'Under review by Brahmapur EOC'}</p>
           </div>
-        \`;
+        `;
       } else {
-        box.innerHTML = \`
+        box.innerHTML = `
           <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-amber-800">
-            No incident matching <strong>\${ref}</strong> found. Ensure the code is exact or check your connection.
+            No incident matching <strong>${ref}</strong> found. Ensure the code is exact or check your connection.
           </div>
-        \`;
+        `;
       }
     }
 
@@ -1519,14 +1526,14 @@
           fillOpacity: 0.85
         });
 
-        circle.bindPopup(\`
+        circle.bindPopup(`
           <div style="font-family: sans-serif; font-size: 12px; line-height: 1.4;">
-            <strong style="color: #0F172A;">\${inc.ref}</strong>
-            <span style="display:inline-block; margin-left:4px; padding: 1px 6px; border-radius:4px; font-weight:bold; background:\${color}20; color:\${color}">\${inc.effectiveUrgency}</span>
-            <div style="margin-top:4px; color:#475569;">\${inc.locationDescription}</div>
-            <div style="margin-top:4px; font-weight:600;">\${inc.originalReport.slice(0, 80)}...</div>
+            <strong style="color: #0F172A;">${inc.ref}</strong>
+            <span style="display:inline-block; margin-left:4px; padding: 1px 6px; border-radius:4px; font-weight:bold; background:${color}20; color:${color}">${inc.effectiveUrgency}</span>
+            <div style="margin-top:4px; color:#475569;">${inc.locationDescription}</div>
+            <div style="margin-top:4px; font-weight:600;">${inc.originalReport.slice(0, 80)}...</div>
           </div>
-        \`);
+        `);
 
         overviewMarkersLayer.addLayer(circle);
       });
@@ -1564,31 +1571,31 @@
         const badgeClass = isCritical ? 'badge-critical' : (inc.effectiveUrgency === 'High' ? 'badge-high' : 'badge-medium');
         const dateStr = new Date(inc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        return \`
-          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:border-orange-300 transition space-y-3 cursor-pointer" onclick="openIncidentDetail('\${inc._id || inc.id}')">
+        return `
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm hover:border-orange-300 transition space-y-3 cursor-pointer" onclick="openIncidentDetail('${inc._id || inc.id}')">
             <div class="flex flex-wrap items-center justify-between gap-2">
               <div class="flex items-center gap-2">
-                <span class="font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2.5 py-1 rounded">\${inc.ref}</span>
-                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full \${badgeClass}">\${inc.effectiveUrgency}</span>
-                <span class="text-xs text-slate-500 font-semibold">\${inc.category || 'General'}</span>
+                <span class="font-mono font-bold text-xs bg-slate-100 text-slate-800 px-2.5 py-1 rounded">${inc.ref}</span>
+                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full ${badgeClass}">${inc.effectiveUrgency}</span>
+                <span class="text-xs text-slate-500 font-semibold">${inc.category || 'General'}</span>
               </div>
-              <span class="text-xs text-slate-400 font-mono">\${dateStr}</span>
+              <span class="text-xs text-slate-400 font-mono">${dateStr}</span>
             </div>
             
             <div>
-              <h4 class="font-bold text-slate-900 text-sm leading-snug">\${inc.aiTriage?.incidentTitle || inc.locationDescription}</h4>
-              <p class="text-xs text-slate-600 mt-1 line-clamp-2">\${inc.originalReport}</p>
+              <h4 class="font-bold text-slate-900 text-sm leading-snug">${inc.aiTriage?.incidentTitle || inc.locationDescription}</h4>
+              <p class="text-xs text-slate-600 mt-1 line-clamp-2">${inc.originalReport}</p>
             </div>
 
             <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 text-xs">
               <div class="flex items-center gap-1 text-slate-500">
                 <i class="fa-solid fa-location-dot text-orange-600"></i>
-                <span class="truncate max-w-xs">\${inc.locationDescription}</span>
+                <span class="truncate max-w-xs">${inc.locationDescription}</span>
               </div>
-              <span class="font-bold uppercase tracking-wider text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded">\${inc.status}</span>
+              <span class="font-bold uppercase tracking-wider text-[10px] text-slate-600 bg-slate-100 px-2 py-0.5 rounded">${inc.status}</span>
             </div>
           </div>
-        \`;
+        `;
       }).join('');
     }
 
@@ -1626,35 +1633,35 @@
       document.getElementById('modalUrgencyBadge').className = 'ml-2 text-xs font-bold px-2 py-0.5 rounded ' + (inc.effectiveUrgency === 'Critical' ? 'badge-critical' : 'badge-high');
 
       const body = document.getElementById('modalBody');
-      body.innerHTML = \`
+      body.innerHTML = `
         <div class="space-y-3 text-xs text-slate-700">
           <div>
             <strong class="text-slate-900 block text-sm">Location:</strong>
-            <span class="text-slate-600">\${inc.locationDescription}</span>
+            <span class="text-slate-600">${inc.locationDescription}</span>
           </div>
           <div>
             <strong class="text-slate-900 block text-sm">Emergency Report:</strong>
-            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 mt-1">\${inc.originalReport}</div>
+            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 mt-1">${inc.originalReport}</div>
           </div>
-          \${inc.aiTriage ? \`
+          ${inc.aiTriage ? `
             <div class="p-3 bg-orange-50 rounded-xl border border-orange-200 text-orange-950 space-y-1.5">
-              <span class="font-bold block text-sm text-orange-900"><i class="fa-solid fa-robot"></i> AI Triage Assessment (\${inc.aiTriage.source}):</span>
-              <div><strong>Summary:</strong> \${inc.aiTriage.summary}</div>
-              <div><strong>Immediate Needs:</strong> \${(inc.aiTriage.immediateNeeds || []).join(', ')}</div>
+              <span class="font-bold block text-sm text-orange-900"><i class="fa-solid fa-robot"></i> AI Triage Assessment (${inc.aiTriage.source}):</span>
+              <div><strong>Summary:</strong> ${inc.aiTriage.summary}</div>
+              <div><strong>Immediate Needs:</strong> ${(inc.aiTriage.immediateNeeds || []).join(', ')}</div>
             </div>
-          \` : ''}
+          ` : ''}
           <div>
             <strong class="text-slate-900 block">Status:</strong>
-            <span class="font-mono uppercase font-bold text-orange-700">\${inc.status}</span>
+            <span class="font-mono uppercase font-bold text-orange-700">${inc.status}</span>
           </div>
         </div>
-      \`;
+      `;
 
       const actions = document.getElementById('modalActions');
-      actions.innerHTML = \`
-        <button onclick="updateIncidentStatus('\${inc._id || inc.id}', 'verified')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs">Verify Incident</button>
-        <button onclick="updateIncidentStatus('\${inc._id || inc.id}', 'resolved')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">Mark Resolved</button>
-      \`;
+      actions.innerHTML = `
+        <button onclick="updateIncidentStatus('${inc._id || inc.id}', 'verified')" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs">Verify Incident</button>
+        <button onclick="updateIncidentStatus('${inc._id || inc.id}', 'resolved')" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs">Mark Resolved</button>
+      `;
 
       document.getElementById('incidentModal').classList.remove('hidden');
 
@@ -1691,15 +1698,15 @@
       const tbody = document.getElementById('volunteersTableBody');
       if (!tbody) return;
 
-      tbody.innerHTML = volunteersList.map(v => \`
+      tbody.innerHTML = volunteersList.map(v => `
         <tr class="hover:bg-slate-50 transition">
-          <td class="py-3 px-4 font-bold text-slate-900">\${v.displayName}</td>
-          <td class="py-3 px-4 text-slate-600">\${v.profile?.teamAffiliation || 'Volunteer'}<br><span class="text-[11px] text-slate-400">\${v.profile?.serviceArea || 'Brahmapur'}</span></td>
-          <td class="py-3 px-4 text-slate-500">\${(v.profile?.skills || []).join(', ')}</td>
-          <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase">\${v.profile?.availability || 'Available'}</span></td>
+          <td class="py-3 px-4 font-bold text-slate-900">${v.displayName}</td>
+          <td class="py-3 px-4 text-slate-600">${v.profile?.teamAffiliation || 'Volunteer'}<br><span class="text-[11px] text-slate-400">${v.profile?.serviceArea || 'Brahmapur'}</span></td>
+          <td class="py-3 px-4 text-slate-500">${(v.profile?.skills || []).join(', ')}</td>
+          <td class="py-3 px-4"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800 uppercase">${v.profile?.availability || 'Available'}</span></td>
           <td class="py-3 px-4 text-right"><button class="bg-orange-600 text-white px-3 py-1 rounded-lg text-xs font-bold hover:bg-orange-700">Dispatch</button></td>
         </tr>
-      \`).join('');
+      `).join('');
     }
 
     async function fetchResources() {
@@ -1710,23 +1717,23 @@
 
       grid.innerHTML = resourcesList.map(r => {
         const avail = Math.max(0, r.quantityTotal - (r.quantityReserved || 0) - (r.quantityDispatched || 0));
-        return \`
+        return `
           <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-3">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-orange-600">\${r.resourceType}</span>
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 font-mono">\${r.ref || 'RES'}</span>
+              <span class="text-xs font-bold uppercase tracking-wider text-orange-600">${r.resourceType}</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700 font-mono">${r.ref || 'RES'}</span>
             </div>
-            <h4 class="font-bold text-slate-900 text-base leading-snug">\${r.name}</h4>
+            <h4 class="font-bold text-slate-900 text-base leading-snug">${r.name}</h4>
             <div class="flex items-baseline gap-2">
-              <span class="text-3xl font-black text-slate-900">\${avail}</span>
-              <span class="text-xs text-slate-500 font-bold uppercase">\${r.unit} available</span>
+              <span class="text-3xl font-black text-slate-900">${avail}</span>
+              <span class="text-xs text-slate-500 font-bold uppercase">${r.unit} available</span>
             </div>
             <div class="text-[11px] text-slate-500 space-y-1 border-t border-slate-100 pt-2">
-              <div>Depot: <strong>\${r.storageLocation || 'BeMC Hub'}</strong></div>
-              <div>Authority: <strong>\${r.responsibleOrg || 'OSDMA Ganjam'}</strong></div>
+              <div>Depot: <strong>${r.storageLocation || 'BeMC Hub'}</strong></div>
+              <div>Authority: <strong>${r.responsibleOrg || 'OSDMA Ganjam'}</strong></div>
             </div>
           </div>
-        \`;
+        `;
       }).join('');
     }
 
@@ -1816,7 +1823,7 @@
       if (target) target.classList.remove('hidden');
       if (navTarget) navTarget.classList.add('active', 'text-orange-600', 'bg-orange-50');
 
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (typeof window.scrollTo === 'function') { try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (_) {} }
 
       if (screenName === 'home') {
         setTimeout(initMaps, 100);
@@ -1856,19 +1863,19 @@
       const container = document.getElementById('authContainer');
       if (!container) return;
       if (user) {
-        container.innerHTML = \`
+        container.innerHTML = `
           <span class="text-xs font-bold text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 flex items-center gap-1.5">
             <i class="fa-solid fa-user-shield text-orange-600"></i>
-            <span>\${user.displayName || user.username}</span>
+            <span>${user.displayName || user.username}</span>
           </span>
           <button onclick="handleLogout()" class="text-xs text-slate-500 hover:text-red-600 font-semibold px-2 py-1">Logout</button>
-        \`;
+        `;
       } else {
-        container.innerHTML = \`
+        container.innerHTML = `
           <button onclick="openLoginModal()" class="text-xs font-bold bg-slate-900 text-white px-3.5 py-1.5 rounded-lg hover:bg-slate-800 transition">
             Sign In
           </button>
-        \`;
+        `;
       }
     }
 
@@ -1927,6 +1934,35 @@
       const countEl = document.getElementById('charCount');
       if (el && countEl) countEl.textContent = el.value.length + ' / 5000 chars';
     }
+
+    
+    // --- 17. GLOBAL WINDOW BINDINGS (PRODUCT-LEVEL FAULT TOLERANCE) ---
+    window.navigate = navigate;
+    window.toggleVoiceSOS = toggleVoiceSOS;
+    window.applyNeedChip = applyNeedChip;
+    window.grabCurrentGPS = grabCurrentGPS;
+    window.submitSOS = submitSOS;
+    window.fetchIncidents = fetchIncidents;
+    window.filterUrgency = filterUrgency;
+    window.openIncidentDetail = openIncidentDetail;
+    window.closeIncidentModal = closeIncidentModal;
+    window.updateIncidentStatus = updateIncidentStatus;
+    window.fetchVolunteers = fetchVolunteers;
+    window.fetchResources = fetchResources;
+    window.loadAnalytics = loadAnalytics;
+    window.toggleLanguage = toggleLanguage;
+    window.openTrackModal = openTrackModal;
+    window.closeTrackModal = closeTrackModal;
+    window.lookupTrackStatus = lookupTrackStatus;
+    window.copyReceiptRef = copyReceiptRef;
+    window.openLoginModal = openLoginModal;
+    window.closeLoginModal = closeLoginModal;
+    window.handleLogin = handleLogin;
+    window.handleLogout = handleLogout;
+    window.toggleMobileNav = toggleMobileNav;
+    window.closeMobileNav = closeMobileNav;
+    window.resetSOSForm = resetSOSForm;
+    window.triggerVoiceDirectly = triggerVoiceDirectly;
 
     // Startup Initialization
     window.addEventListener('DOMContentLoaded', async () => {
